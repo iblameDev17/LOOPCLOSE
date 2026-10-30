@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: loopclose
+    runtime: docker
+    plan: free
+    autoDeploy: false # deploys are triggered by the GitHub Actions deploy hook, not by Render itself
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: loopclose-db
+          property: connectionString
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false # set manually in Render dashboard
+      - key: GEMINI_MODEL
+        sync: false
+      - key: EMBEDDING_MODEL
+        sync: false
+      - key: SEED_DEMO_DATA
+        value: "true"
+databases:
+  - name: loopclose-db
+    plan: free

@@ -63,13 +63,13 @@ Tasks:
 **Depends on:** Unit 1 · **Read:** `ARCHITECTURE.md` §14.
 
 Tasks:
-- [ ] **U2-T1** `Dockerfile` + `.dockerignore` per §14.4 (non-root, `$PORT`, 1 worker, logs dir). Verify `docker build` + run locally if Docker available.
-- [ ] **U2-T2** `.github/workflows/ci-cd.yml` per §14.2 (jobs: gitleaks, codeql, test, docker, deploy + smoke test; concurrency; least-privilege permissions). Verify action tags resolve; use latest majors if not.
-- [ ] **U2-T3** `.gitleaks.toml` per §14.3.
-- [ ] **U2-T4** `render.yaml` per §14.5 (web service + free Postgres, `autoDeploy: false`, health check).
-- [ ] **U2-T5** Document in `memory.md → Environment & Deployment` the **manual steps for the human**: create Render blueprint from repo; set `GEMINI_API_KEY`, `GEMINI_MODEL`, `EMBEDDING_MODEL` in Render; copy the service's **Deploy Hook URL** into GitHub secret `RENDER_DEPLOY_HOOK_URL`; add secret `APP_URL`; confirm repo is public for CodeQL; verify first workflow run.
+- [x] **U2-T1** `Dockerfile` + `.dockerignore` per §14.4 (non-root, `$PORT`, 1 worker, logs dir). Verify `docker build` + run locally if Docker available.
+- [x] **U2-T2** `.github/workflows/ci-cd.yml` per §14.2 (jobs: gitleaks, codeql, test, docker, deploy + smoke test; concurrency; least-privilege permissions). Verify action tags resolve; use latest majors if not.
+- [x] **U2-T3** `.gitleaks.toml` per §14.3.
+- [x] **U2-T4** `render.yaml` per §14.5 (web service + free Postgres, `autoDeploy: false`, health check).
+- [x] **U2-T5** Document in `memory.md → Environment & Deployment` the **manual steps for the human**: create Render blueprint from repo; set `GEMINI_API_KEY`, `GEMINI_MODEL`, `EMBEDDING_MODEL` in Render; copy the service's **Deploy Hook URL** into GitHub secret `RENDER_DEPLOY_HOOK_URL`; add secret `APP_URL`; confirm repo is public for CodeQL; verify first workflow run.
 - [ ] **U2-T6** (Human + AI) Push; confirm all jobs run; confirm deploy triggers and smoke test sees the new commit; record the live URL in `memory.md`.
-- [ ] **U2-T7** Optional: `.pre-commit-config.yaml` with gitleaks (local guard); mention in README later.
+- [x] **U2-T7** Optional: `.pre-commit-config.yaml` with gitleaks (local guard); mention in README later.
 
 **Acceptance:** a push shows the workflow starting within seconds; Gitleaks, CodeQL, test and docker jobs green; on `main` the deploy job triggers Render and the smoke test passes (`/health.commit == github.sha`); live URL shows the Unit 1 UI. A deliberately committed fake secret on a throwaway branch is caught by Gitleaks (demo evidence; then remove it from history or use an allowlisted dummy — do **not** leave real-looking secrets in the repo).
 
