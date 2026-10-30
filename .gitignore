@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment / secrets — NEVER commit
+.env
+*.env.local
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Logs (ephemeral; gitkeep preserves the directory)
+logs/*.log
+logs/*.log.*
+
+# IDE / OS
+.idea/
+.vscode/
+*.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.directory
+
+# Test / coverage artefacts
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# Docker
+
+# Render / CI artefacts (runtime only)
+*.pid

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}{{ status }} — {{ title }}{% endblock %}
+
+{% block content %}
+<div class="error-page">
+  <div class="error-code text-muted">{{ status }}</div>
+  <h1>{{ title }}</h1>
+  <p class="text-muted">{{ message }}</p>
+
+  <div class="error-actions">
+    <a href="/" class="btn btn-primary">Back to Dashboard</a>
+  </div>
+
+  {% if request_id %}
+  <div class="error-request-id">
+    <span class="text-faint small">Request ID:</span>
+    <code class="mono" id="error-request-id">{{ request_id }}</code>
+    <button class="btn-ghost btn-icon" type="button" title="Copy request ID"
+            onclick="copyText('error-request-id')" aria-label="Copy request ID">
+      <svg width="14" height="14" aria-hidden="true"><use href="#icon-copy"/></svg>
+    </button>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
