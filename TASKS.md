@@ -101,14 +101,14 @@ Tasks:
 **Depends on:** Unit 3 · **Read:** `PRD.md` §5.3–5.4; `ARCHITECTURE.md` §7–8; `design.md` §4.4–4.7, §5.4–5.6.
 
 Tasks:
-- [ ] **U4-T1** Models: `ActionItem`, `ActionItemEvent` (append-only), computed `is_overdue`/`is_open`.
-- [ ] **U4-T2** `action_item_service`: create, edit (due date change event), status transitions (blocked needs reason), reassign (event w/ from→to), **close with outcome** (status mapping per §8.2), reopen (preserve outcome in event note), list/filter/sort. Every mutation writes an event **and** a log event.
-- [ ] **U4-T3** `carry_forward_service`: carry open/in_progress/blocked items from X to Y; increment `carried_count`; update `current_meeting_id`; write `carried_forward` events; return count. Support "create next meeting with `previous_meeting_id` + auto carry-forward".
-- [ ] **U4-T4** Complete handover reassign: bulk reassign `from` person's open items to `to` person.
-- [ ] **U4-T5** Routers + templates: Items tab on meeting detail (list + inline add form), global `/items` list with filters, item detail with side card, expanding **Close with outcome** panel, reassign, status controls, **history timeline**, "Carried over" section on meeting Overview, close-meeting carry-forward prompt.
-- [ ] **U4-T6** Dashboard cards wired: My open items, Overdue, Needs owner, Upcoming meetings, Recent decisions.
-- [ ] **U4-T7** Item row component with priority edge, status/overdue/unassigned/carried badges (per `design.md` §4.4–4.5), avatar.
-- [ ] **U4-T8** Tests: close requires outcome; blocked requires reason; reassign writes event; carry-forward semantics (open items only, counts, events, origin unchanged); reopen; overdue computation; due-date-in-past rejected on create.
+- [x] **U4-T1** Models: `ActionItem`, `ActionItemEvent` (append-only), computed `is_overdue`/`is_open`.
+- [x] **U4-T2** `action_item_service`: create, edit (due date change event), status transitions (blocked needs reason), reassign (event w/ from→to), **close with outcome** (status mapping per §8.2), reopen (preserve outcome in event note), list/filter/sort. Every mutation writes an event **and** a log event.
+- [x] **U4-T3** `carry_forward_service`: carry open/in_progress/blocked items from X to Y; increment `carried_count`; update `current_meeting_id`; write `carried_forward` events; return count. Support "create next meeting with `previous_meeting_id` + auto carry-forward".
+- [x] **U4-T4** Complete handover reassign: bulk reassign `from` person's open items to `to` person.
+- [x] **U4-T5** Routers + templates: Items tab on meeting detail (list + inline add form), global `/items` list with filters, item detail with side card, expanding **Close with outcome** panel, reassign, status controls, **history timeline**, "Carried over" section on meeting Overview, close-meeting carry-forward prompt.
+- [x] **U4-T6** Dashboard cards wired: My open items, Overdue, Needs owner, Upcoming meetings, Recent decisions.
+- [x] **U4-T7** Item row component with priority edge, status/overdue/unassigned/carried badges (per `design.md` §4.4–4.5), avatar.
+- [x] **U4-T8** Tests: close requires outcome; blocked requires reason; reassign writes event; carry-forward semantics (open items only, counts, events, origin unchanged); reopen; overdue computation; due-date-in-past rejected on create.
 
 **Acceptance:** create items in a meeting; change status; reassign; close with outcome (and see validation if missing); close a meeting and carry open items to the next one with "Carried 1×" visible and `carried_forward` in the timeline; handover reassign works; logs show `item.created`, `item.reassigned`, `item.closed`, `item.carried_forward`, `meeting.carry_forward`.
 

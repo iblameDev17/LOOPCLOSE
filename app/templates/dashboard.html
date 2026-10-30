@@ -5,67 +5,135 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>Dashboard</h1>
+  <h1 class="page-title">Dashboard</h1>
   <p class="text-muted">Welcome to LoopClose — your AI-powered meeting and handover tracker.</p>
 </div>
 
-<!-- Placeholder cards — wired up with real data in Unit 3/4 -->
+{# Three-column grid per design.md §5.1 #}
 <div class="grid-3">
 
-  <div class="card">
-    <div class="card-header">
-      <h2 class="card-title">My open items</h2>
+  {# Column 1: My Open Items #}
+  <div class="card" style="display: flex; flex-direction: column;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+      <h2 class="card-title" style="font-size: 16px;">
+        {% if viewing_person %}
+          My open items ({{ viewing_person.name }})
+        {% else %}
+          Open items
+        {% endif %}
+      </h2>
+      <a href="/items{% if viewing_as_id %}?owner_id={{ viewing_as_id }}{% endif %}" class="btn btn-ghost btn-sm">View all</a>
     </div>
-    <div class="empty-state">
-      <svg width="48" height="48" aria-hidden="true"><use href="#icon-check-circle"/></svg>
-      <p>No open items yet.</p>
-      <a href="/items" class="btn btn-primary">View all items</a>
+
+    {% if my_open_items %}
+      <div class="items-list" style="flex: 1;">
+        {% for item in my_open_items %}
+          {% include "partials/item_row.html" %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="flex: 1; padding: 32px 16px; text-align: center;">
+        <svg width="40" height="40" aria-hidden="true" style="stroke: var(--text-muted); stroke-width: 1.5; fill: none; margin-bottom: 8px;"><use href="#icon-check-circle"/></svg>
+        <p class="text-sm text-muted">No open items assigned to you right now.</p>
+        <a href="/items" class="btn btn-secondary btn-sm">Browse all items</a>
+      </div>
+    {% endif %}
+  </div>
+
+  {# Column 2: Needs attention #}
+  <div class="card" style="display: flex; flex-direction: column;">
+    <div class="card-header" style="padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+      <h2 class="card-title" style="font-size: 16px;">Needs attention</h2>
+    </div>
+
+    <div class="stat-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 24px 16px; text-align: center;">
+      <a href="/items?overdue=true" class="stat-tile card" style="padding: 16px; text-decoration: none;">
+        <span class="stat-number {% if overdue_count > 0 %}text-danger{% else %}text-muted{% endif %}" style="font-size: 28px; font-weight: 700; display: block;">
+          {{ overdue_count }}
+        </span>
+        <span class="stat-label text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.5px;">Overdue</span>
+      </a>
+
+      <a href="/items" class="stat-tile card" style="padding: 16px; text-decoration: none;">
+        <span class="stat-number {% if needs_owner_count > 0 %}text-warning{% else %}text-muted{% endif %}" style="font-size: 28px; font-weight: 700; display: block;">
+          {{ needs_owner_count }}
+        </span>
+        <span class="stat-label text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.5px;">Needs owner</span>
+      </a>
+    </div>
+
+    <div class="card-footer" style="margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--border); text-align: right;">
+      <a href="/items" class="btn btn-ghost btn-sm">Explore tracker &rarr;</a>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-header">
-      <h2 class="card-title">Needs attention</h2>
+  {# Column 3: Upcoming meetings #}
+  <div class="card" style="display: flex; flex-direction: column;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+      <h2 class="card-title" style="font-size: 16px;">Upcoming meetings</h2>
+      <a href="/meetings/new" class="btn btn-primary btn-sm">+ New</a>
     </div>
-    <div class="stat-row">
-      <div class="stat-tile">
-        <span class="stat-number text-danger">0</span>
-        <span class="stat-label">Overdue</span>
-      </div>
-      <div class="stat-tile">
-        <span class="stat-number text-warning">0</span>
-        <span class="stat-label">Needs owner</span>
-      </div>
-      <div class="stat-tile">
-        <span class="stat-number">0</span>
-        <span class="stat-label">High-risk nudges</span>
-      </div>
-    </div>
-    <div class="card-footer">
-      <a href="/nudges" class="btn btn-ghost">Open Nudge Center →</a>
-    </div>
-  </div>
 
-  <div class="card">
-    <div class="card-header">
-      <h2 class="card-title">Upcoming meetings</h2>
-    </div>
-    <div class="empty-state">
-      <svg width="48" height="48" aria-hidden="true"><use href="#icon-calendar"/></svg>
-      <p>No upcoming meetings.</p>
-      <a href="/meetings/new" class="btn btn-primary">Schedule one</a>
-    </div>
+    {% if upcoming_meetings %}
+      <div style="padding: 8px 16px; flex: 1;">
+        {% for m in upcoming_meetings %}
+          <div style="padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <a href="/meetings/{{ m.id }}" style="font-weight: 600; text-decoration: none; color: var(--text);">
+                {{ m.title }}
+              </a>
+              {% if m.is_handover %}
+                <span class="badge badge-primary" style="margin-left: 6px;">Handover</span>
+              {% endif %}
+              <div class="text-xs text-muted" style="margin-top: 2px;">
+                {{ m.scheduled_at.strftime('%a %d %b, %H:%M') }} &middot; {{ m.participants | length }} participants
+              </div>
+            </div>
+            <a href="/meetings/{{ m.id }}" class="btn btn-secondary btn-sm">Open</a>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="flex: 1; padding: 32px 16px; text-align: center;">
+        <svg width="40" height="40" aria-hidden="true" style="stroke: var(--text-muted); stroke-width: 1.5; fill: none; margin-bottom: 8px;"><use href="#icon-calendar"/></svg>
+        <p class="text-sm text-muted">No meetings scheduled.</p>
+        <a href="/meetings/new" class="btn btn-primary btn-sm">Schedule a meeting</a>
+      </div>
+    {% endif %}
   </div>
 
 </div>
 
-<div class="card" style="margin-top: var(--space-5);">
-  <div class="card-header">
-    <h2 class="card-title">Recent decisions</h2>
+{# Recent Decisions Card #}
+<div class="card" style="margin-top: 24px;">
+  <div class="card-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+    <h2 class="card-title" style="font-size: 16px;">Recent Decisions Across Meetings</h2>
   </div>
-  <div class="empty-state">
-    <svg width="48" height="48" aria-hidden="true"><use href="#icon-book"/></svg>
-    <p>No decisions recorded yet.</p>
+
+  <div style="padding: 16px 20px;">
+    {% if recent_decisions %}
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        {% for d in recent_decisions %}
+          <div style="display: flex; gap: 12px; align-items: flex-start; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
+            <div style="color: var(--primary); font-size: 18px; line-height: 1;">&bull;</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 500;">{{ d.text }}</div>
+              <div class="text-xs text-muted" style="margin-top: 2px;">
+                Recorded in <a href="/meetings/{{ d.meeting.id }}" class="text-primary">{{ d.meeting.title }}</a>
+                &middot; {{ d.created_at.strftime('%d %b %Y') }}
+                {% if d.source in ('ai', 'heuristic') %}
+                  <span class="badge badge-ai" style="margin-left: 6px;">AI</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: 24px 16px; text-align: center;">
+        <p class="text-muted text-sm">No decisions logged yet.</p>
+      </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

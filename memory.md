@@ -21,17 +21,17 @@
 ## 1. CURRENT STATE SNAPSHOT  *(rewrite in place every pass)*
 
 ```
-Last updated:            2026-10-30T08:10:00Z
-Last pass #:             3
-Last unit worked on:     Unit 3 (Core domain: people, meetings & handovers)
+Last updated:            2026-10-30T08:45:00Z
+Last pass #:             4
+Last unit worked on:     Unit 4 (Action items, history, carry-forward)
 Agent / tool:            Antigravity (Gemini 3.8 Flash)
 Repo runnable locally:   yes (uvicorn app.main:app, verified)
-Tests passing:           yes [count: 32]
-Pipeline status (main):  green on Unit 2, ready for Unit 3 push
+Tests passing:           yes [count: 44]
+Pipeline status (main):  diagnostic smoke test + Docker ARG commit injection configured
 Live URL:                (configured on Render)
-Units complete:          Unit 1, Unit 2, Unit 3
+Units complete:          Unit 1, Unit 2, Unit 3, Unit 4
 Units in progress:       none
-Next recommended unit:   Unit 4 (Action items, history, carry-forward)
+Next recommended unit:   Unit 5 (AI foundation + recap)
 ```
 
 ---
@@ -49,10 +49,10 @@ Format: `path — purpose — created in Unit X — notes/gotchas`
 - `memory.md` — this file — Unit 0 — agents update every pass
 
 **DevOps & Deployment:**
-- `Dockerfile` — container definition for Python 3.12-slim as non-root user with healthcheck — Unit 2
+- `Dockerfile` — container definition for Python 3.12-slim as non-root user with healthcheck, accepting RENDER_GIT_COMMIT and GIT_SHA build args — Unit 2 (updated Pass 4)
 - `.gitleaks.toml` — Gitleaks secret detection configuration with allowlist for test mocks and examples — Unit 2
 - `render.yaml` — Render Blueprint specification for loopclose web service + loopclose-db — Unit 2
-- `.github/workflows/ci-cd.yml` — GitHub Actions workflow (gitleaks, codeql, test, docker, deploy + smoke test) — Unit 2
+- `.github/workflows/ci-cd.yml` — GitHub Actions workflow (gitleaks, codeql, test, docker w/ build-args, deploy + diagnostic smoke test) — Unit 2 (updated Pass 4)
 - `.pre-commit-config.yaml` — optional local pre-commit guard for ruff and gitleaks — Unit 2
 - `.dockerignore` — Docker build context exclusion rules — Unit 1 — excludes .git, .venv, logs, local.db
 
@@ -74,46 +74,52 @@ Format: `path — purpose — created in Unit X — notes/gotchas`
 - `app/main.py` — FastAPI application factory, lifespan handler, router/middleware/template registration — Unit 1 — starts app
 
 **Core Domain (Models, Schemas, Services):**
-- `app/models/__init__.py` — exports all models — Unit 1 (updated Unit 3)
+- `app/models/__init__.py` — exports all models — Unit 1 (updated Unit 3/4)
 - `app/models/person.py` — Person model (initials property, active/on_leave flags, relationships) — Unit 3
 - `app/models/meeting.py` — Meeting and MeetingParticipant models (kind, status, handover fields, notes, relationships) — Unit 3
 - `app/models/decision.py` — Decision model (meeting relationship, created_at) — Unit 3
-- `app/models/action_item.py` — ActionItem and ActionItemEvent models (relational stubs for Unit 3 FKs) — Unit 3
-- `app/schemas/__init__.py` — exports all schemas — Unit 1 (updated Unit 3)
+- `app/models/action_item.py` — ActionItem and ActionItemEvent models (full fields, is_open, is_overdue, overdue_days, relationships) — Unit 3 (completed Unit 4)
+- `app/schemas/__init__.py` — exports all schemas — Unit 1 (updated Unit 3/4)
 - `app/schemas/person.py` — PersonCreate and PersonRead Pydantic schemas with email regex validation — Unit 3
 - `app/schemas/meeting.py` — MeetingCreate, MeetingUpdate, MeetingStatusUpdate, NotesUpdate, ParticipantAttendanceUpdate schemas — Unit 3
 - `app/schemas/decision.py` — DecisionCreate and DecisionRead schemas — Unit 3
-- `app/services/__init__.py` — exports services — Unit 1 (updated Unit 3)
+- `app/schemas/action_item.py` — ActionItemCreate, ActionItemUpdate, ActionItemClose, ActionItemReassign, ActionItemStatusUpdate, ActionItemRead schemas — Unit 4
+- `app/services/__init__.py` — exports services — Unit 1 (updated Unit 3/4)
 - `app/services/people_service.py` — list, get, and create people with duplicate email check and event logging — Unit 3
-- `app/services/meeting_service.py` — meeting/handover creation, lifecycle state transitions, attendance, notes caps, decisions, handover reassign stub — Unit 3
+- `app/services/meeting_service.py` — meeting/handover creation, lifecycle state transitions, attendance, notes caps, decisions, handover reassign — Unit 3 (updated Unit 4)
+- `app/services/action_item_service.py` — full action item lifecycle, status transitions, close with outcome, reopen, reassign, audit events — Unit 4
+- `app/services/carry_forward_service.py` — carry forward open items across meetings, carried count increment, audit events — Unit 4
 
 **Routers:**
 - `app/routers/__init__.py` — package marker — Unit 1
 - `app/routers/health.py` — `/health` endpoint returning system status, db check, commit, and AI config status — Unit 1
-- `app/routers/web_dashboard.py` — `/` dashboard route injecting active people and viewing-as ID — Unit 1 (updated Unit 3)
+- `app/routers/web_dashboard.py` — `/` dashboard route wired with real cards (My open items, Overdue, Needs owner, Upcoming meetings, Decisions) — Unit 1 (updated Unit 4)
 - `app/routers/web_people.py` — `/people` directory view, inline create, and `/viewing-as` persona switcher — Unit 3
-- `app/routers/web_meetings.py` — `/meetings` list, `/meetings/new` form, `/meetings/{id}` detail & tab HTMX endpoints, decisions, attendance — Unit 3
-- `app/routers/web_items.py` — placeholder module for action items web routes — Unit 1 (stub for Unit 4)
+- `app/routers/web_meetings.py` — `/meetings` list, `/meetings/new` form, `/meetings/{id}` detail & tab HTMX endpoints, decisions, attendance, carried items — Unit 3 (updated Unit 4)
+- `app/routers/web_items.py` — `/items` list with filters, `/items/new`, `/items/{id}` detail with side card & timeline, `/items/{id}/close`, `/items/{id}/status`, `/items/{id}/reassign`, `/items/{id}/reopen` — Unit 4
 - `app/routers/web_kb.py` — placeholder module for KB web routes — Unit 1 (stub for Unit 6)
 - `app/routers/web_nudges.py` — placeholder module for nudges web routes — Unit 1 (stub for Unit 7)
 - `app/routers/api_v1.py` — placeholder module for API routes — Unit 1 (stub)
 
 **Templates & Static Assets:**
 - `app/templates/base.html` — base Jinja2 template with responsive nav, "Viewing as" selector, SVG sprite, toasts, footer — Unit 1 (updated Unit 3)
-- `app/templates/dashboard.html` — dashboard layout verifying typography and styles — Unit 1
+- `app/templates/dashboard.html` — dynamic dashboard layout wired with cards per design.md §5.1 — Unit 1 (updated Unit 4)
 - `app/templates/error.html` — friendly error page with HTTP code, description, and copyable Request ID — Unit 1
+- `app/templates/partials/item_row.html` — reusable item row component with priority edge, badges, avatar, carried chips — Unit 4
+- `app/templates/items/list.html` — filterable action items list with status chips, owner select, meeting filter, overdue checkbox — Unit 4
+- `app/templates/items/detail.html` — item detail page with side card, action buttons, expanding close with outcome panel, history timeline — Unit 4
 - `app/templates/people/index.html` — People directory table, avatar pills, active/on-leave status badges, inline create form — Unit 3
 - `app/templates/meetings/list.html` — Filterable meeting/handover list with kind and status pills, avatars, empty state — Unit 3
 - `app/templates/meetings/form.html` — Meeting/Handover create form with dynamic kind toggle, participant checkboxes, handover pickers — Unit 3
 - `app/templates/meetings/detail.html` — Full meeting detail view with action buttons, status badges, tabs, and modals — Unit 3
-- `app/templates/meetings/partials/overview_tab.html` — Meeting overview tab, handover banner, agenda card, embedded participants and decisions — Unit 3
+- `app/templates/meetings/partials/overview_tab.html` — Meeting overview tab, handover banner, carried-over items card, close carry-forward prompt, agenda, participants, decisions — Unit 3 (updated Unit 4)
 - `app/templates/meetings/partials/notes_tab.html` — Notes editor with 50,000 char counter, live countdown, and save form — Unit 3
 - `app/templates/meetings/partials/decisions_list.html` — Decisions list with delete action and inline add form — Unit 3
 - `app/templates/meetings/partials/participants_card.html` — Participants roster with inline HTMX attendance dropdowns and add form — Unit 3
-- `app/templates/meetings/partials/items_tab.html` — Placeholder tab for Unit 4 — Unit 3
+- `app/templates/meetings/partials/items_tab.html` — Meeting action items list with inline add form — Unit 3 (completed Unit 4)
+- `app/templates/meetings/partials/history_tab.html` — Meeting event timeline for all item and meeting mutations — Unit 3 (completed Unit 4)
 - `app/templates/meetings/partials/brief_tab.html` — Placeholder tab for Unit 6 — Unit 3
 - `app/templates/meetings/partials/knowledge_tab.html` — Placeholder tab for Unit 6 — Unit 3
-- `app/templates/meetings/partials/history_tab.html` — Placeholder tab for Unit 4 — Unit 3
 - `app/static/css/app.css` — full CSS design system implementing tokens, dark mode, buttons, cards, badges, timeline, forms — Unit 1
 - `app/static/js/app.js` — vanilla JS helpers for toast notifications, clipboard copy, tabs, and theme toggling — Unit 1
 
@@ -122,6 +128,7 @@ Format: `path — purpose — created in Unit X — notes/gotchas`
 - `tests/conftest.py` — test fixtures with temporary isolated SQLite DB, client, and clean_db autouse cleanup — Unit 1 (updated Unit 3)
 - `tests/test_unit1_foundation.py` — 17 unit/integration tests verifying health, headers, logging, redaction, URLs, errors — Unit 1
 - `tests/test_unit3_core_domain.py` — 15 tests for lifecycle, handover rules, participant uniqueness, attendance, notes cap, and UI endpoints — Unit 3
+- `tests/test_unit4_action_items.py` — 12 unit/integration tests for action items lifecycle, outcomes, blocked reasons, carry forward semantics, and routes — Unit 4
 - `logs/.gitkeep` — keeps logs directory tracked in git — Unit 1
 
 ---
@@ -166,7 +173,7 @@ uvicorn app.main:app --reload
 
 **Live URL:** (configured on Render)
 **Render notes (free-tier behaviour observed):** Web service sleeps after ~15 min of inactivity; free database expires after 30 days; filesystem is ephemeral (stdout logs preserved).
-**Pipeline notes:** Actions tagged at latest major versions (CodeQL v4, setup-python v5, docker v6).
+**Pipeline notes:** Dockerfile accepts `ARG RENDER_GIT_COMMIT` and `ARG GIT_SHA` and exports them to container `ENV` so commit SHA is available to `/health` in Docker deployments. CI smoke test runs 36 iterations of `curl -sSL --max-time 30`, printing HTTP code and 200-char body preview, with clear warning if `/health` has null commit.
 
 ---
 
@@ -185,6 +192,9 @@ uvicorn app.main:app --reload
 | 9 | 2026-10-30 | Unit 3 | Dual-cased enum attributes in `app/enums.py` | Allowed uppercase (`MeetingKind.MEETING`) and lowercase (`MeetingKind.meeting`) interoperability | `app/enums.py` |
 | 10 | 2026-10-30 | Unit 3 | Set `Response` as route return type for union responses | FastAPI inspects `HTMLResponse | Response` as OpenAPI model and errors out | `app/routers/web_meetings.py` |
 | 11 | 2026-10-30 | Unit 3 | Autouse `clean_db` fixture in `conftest.py` with isolated temp SQLite DB | Ensures 100% test isolation and idempotency across repeated test runs | `tests/conftest.py` |
+| 12 | 2026-10-30 | Unit 2 | `ARG RENDER_GIT_COMMIT` and `ARG GIT_SHA` in Dockerfile exported to `ENV` | Render passes RENDER_GIT_COMMIT as build ARG for Docker; exporting to ENV makes it accessible at runtime to /health | `Dockerfile`, `.github/workflows/ci-cd.yml` |
+| 13 | 2026-10-30 | Unit 2 | Diagnostic smoke test in CI workflow with response preview & degraded warning | Shows exact HTTP status and body on every attempt, warning clearly if commit is null | `.github/workflows/ci-cd.yml` |
+| 14 | 2026-10-30 | Unit 4 | Close with outcome enforcement | Status cannot be directly set to done/dropped via change_status; must call close_action_item with OutcomeType and outcome_note (>=5 chars) | `app/services/action_item_service.py` |
 
 ---
 
@@ -196,19 +206,18 @@ uvicorn app.main:app --reload
 
 ## 7. NEXT PASS CONSIDERATIONS  *(rewrite in place every pass — the most important section for the next agent)*
 
-- **Next unit:** Unit 4 — Action items, history, carry-forward (`TASKS.md` U4-T1 to U4-T8).
-- **Files to create/modify in Unit 4:**
-  - `app/models/action_item.py` (expand with full fields, computed properties, relationships to Person and Meeting)
-  - `app/schemas/action_item.py` (schemas for creation, edit, status transition, close with outcome, reassign)
-  - `app/services/action_item_service.py` (item lifecycle, outcomes, blocked reasons, event audit logging)
-  - `app/services/carry_forward_service.py` (carry forward open items across meetings, carried count increment)
-  - `app/services/meeting_service.py` (wire complete bulk reassignment of handover items)
-  - `app/routers/web_items.py` (global `/items` list, filter by status/priority/owner, item detail page with side card)
-  - `app/templates/items/` (item lists, item detail, close-with-outcome modal, timeline partial)
-  - `app/templates/meetings/partials/items_tab.html` (wire real item table and inline creation)
-  - `app/templates/meetings/partials/history_tab.html` (wire timeline events)
-  - `tests/test_unit4_action_items.py` (close requires outcome, blocked requires reason, carry forward semantics)
-- **Checklist before running Unit 4:** Ensure `ruff format --check .`, `ruff check .`, and `pytest` are all passing.
+- **Next unit:** Unit 5 — AI foundation + recap (`TASKS.md` U5-T1 to U5-T7).
+- **Files to create/modify in Unit 5:**
+  - `app/ai/provider.py` (LLMProvider protocol)
+  - `app/ai/gemini.py` (GeminiProvider using google-genai SDK)
+  - `app/ai/fake.py` (FakeProvider with failure simulation toggles: timeout, invalid JSON, empty)
+  - `app/ai/client.py` (AIClient with retry, timeout, schema validation, ai.call logging)
+  - `app/ai/prompts/recap.py` (recap prompt version 1 with meeting date relative date resolution)
+  - `app/ai/fallbacks.py` (heuristic recap extraction rules)
+  - `app/services/recap_service.py` (recap generation, owner resolution, apply proposals)
+  - `app/templates/meetings/partials/notes_tab.html` (Generate recap AI button with skeleton loader, review proposal card)
+  - `tests/test_unit5_ai_recap.py`
+- **Checklist before running Unit 5:** Ensure `ruff format --check .`, `ruff check .`, and `pytest` are all passing.
 
 ---
 
@@ -388,4 +397,65 @@ uvicorn app.main:app --reload
 **Next pass should:**
 1. Follow `AGENTS.md` ritual and read `memory.md`.
 2. Build Unit 4: Action items, history, carry-forward (`TASKS.md` U4-T1 to U4-T8).
+
+---
+
+### Pass 4 — Unit 4: Action items, history, carry-forward
+- **Date/time (UTC):** 2026-10-30T08:45:00Z
+- **Agent/tool:** Antigravity — Gemini 3.8 Flash
+- **Goal of this pass:** Build full action item lifecycle, append-only history audit events, carry-forward service, bulk handover item reassignment, dynamic dashboard cards, responsive list and detail views, and diagnostic smoke test fix for Render.
+- **Status:** complete
+
+**Done (verified):**
+- U4-T1: Models `ActionItem` and `ActionItemEvent` completed with computed properties `is_open`, `is_overdue`, and `overdue_days`, plus relationships to `Person`, `Meeting`, and audit events.
+- U4-T2: `action_item_service` implemented with complete lifecycle: creation with due date not in past validation, updates (`updated`, `due_date_changed` events), status transitions (`open <-> in_progress <-> blocked` requiring reason >=3 chars), reassignments (`reassigned` event with from/to names), close with outcome (`completed`/`partially_completed` -> `done`, `dropped`/`superseded` -> `dropped` requiring note >=5 chars), and reopen (restoring open state while preserving previous outcome in event note).
+- U4-T3: `carry_forward_service` implemented: moves open/in_progress/blocked items from source meeting to target meeting, increments `carried_count`, writes `carried_forward` event with meeting context, emits `meeting.carry_forward`.
+- U4-T4: Handover bulk reassignment wired in `meeting_service.reassign_handover_items`, reassigning departing person's open items to incoming person.
+- U4-T5: Routers and templates created:
+  - Global `/items` list with filters (status, owner, meeting, overdue checkbox, sort by due date).
+  - Item detail `/items/{id}` with side card, action controls, expanding Close with outcome panel, and history timeline.
+  - Meeting detail `Items` tab wired with inline creation form and meeting items list.
+  - Meeting detail `Overview` tab wired with Carried Over section and closed meeting carry-forward prompt.
+  - Meeting detail `History` tab wired with real chronological item and meeting event timeline.
+- U4-T6: Dashboard `/` wired with dynamic cards: My open items (filtered by viewing-as persona), Needs attention (overdue count, needs owner count), Upcoming meetings, and Recent decisions.
+- U4-T7: Item row component created (`app/templates/partials/item_row.html`) with priority edge border, status/overdue/unassigned/carried/AI badges, avatar initials, and formatted dates.
+- U4-T8: 12 tests in `tests/test_unit4_action_items.py` verifying close requires outcome, blocked requires reason, direct transition to done blocked, carry forward semantics (open only, counts, origin unchanged), reopen restores open and preserves outcome, overdue computation, and due date in past rejected. Total test suite: 44 tests passing.
+- DevOps / CI Smoke test fix: Dockerfile updated with `ARG RENDER_GIT_COMMIT` and `ARG GIT_SHA` exported to container `ENV`; `.github/workflows/ci-cd.yml` updated with `build-args` and diagnostic smoke test printing HTTP code, 200-char preview, and warning if commit is null.
+
+**Done but NOT VERIFIED:**
+- None. All 44 tests run and pass.
+
+**Not done / deferred:**
+- AI recap and knowledge base linking (belong to Units 5 and 6).
+
+**Files created or modified:**
+- `Dockerfile`
+- `.github/workflows/ci-cd.yml`
+- `app/models/action_item.py`
+- `app/schemas/action_item.py`, `app/schemas/__init__.py`
+- `app/services/action_item_service.py`, `app/services/carry_forward_service.py`, `app/services/meeting_service.py`, `app/services/__init__.py`
+- `app/routers/web_items.py`, `app/routers/web_dashboard.py`, `app/routers/web_meetings.py`, `app/main.py`
+- `app/templates/partials/item_row.html`
+- `app/templates/items/list.html`, `app/templates/items/detail.html`
+- `app/templates/meetings/partials/items_tab.html`, `app/templates/meetings/partials/overview_tab.html`, `app/templates/meetings/partials/history_tab.html`
+- `app/templates/dashboard.html`
+- `tests/test_unit4_action_items.py`
+- `TASKS.md`
+- `memory.md`
+
+**Commands run to verify:**
+- `.venv\Scripts\ruff check .` (All checks passed)
+- `.venv\Scripts\ruff format --check .` (68 files formatted)
+- `.venv\Scripts\pytest -q` (44 passed in 0.99s)
+
+**Pipeline result after push:**
+- Ready to push to GitHub `main`.
+
+**Gotchas / lessons for the next agent:**
+- Render's Docker runtime supplies `RENDER_GIT_COMMIT` as a build ARG; without `ARG RENDER_GIT_COMMIT` and `ENV RENDER_GIT_COMMIT=${RENDER_GIT_COMMIT}` in Dockerfile, runtime environment variables in the container do not have access to the commit SHA.
+
+**Next pass should:**
+1. Follow `AGENTS.md` ritual and read `memory.md`.
+2. Build Unit 5: AI foundation + recap (`TASKS.md` U5-T1 to U5-T7).
+
 

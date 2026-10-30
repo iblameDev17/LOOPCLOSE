@@ -1,0 +1,92 @@
+{# Reusable Action Item Row Component per design.md §4.4-4.5 #}
+<div class="item-row priority-{{ item.priority | lower }}" id="item-row-{{ item.id }}">
+  <div class="item-row-main">
+    <div class="item-row-title-line">
+      <a href="/items/{{ item.id }}" class="item-title-link">
+        <strong>{{ item.title }}</strong>
+      </a>
+      <div class="badges-row">
+        {# Status badge #}
+        {% if item.status == 'open' %}
+          <span class="badge badge-info">Open</span>
+        {% elif item.status == 'in_progress' %}
+          <span class="badge badge-warning">In progress</span>
+        {% elif item.status == 'blocked' %}
+          <span class="badge badge-danger" title="{{ item.blocked_reason or 'Blocked' }}">Blocked</span>
+        {% elif item.status == 'done' %}
+          <span class="badge badge-success">Done</span>
+        {% elif item.status == 'dropped' %}
+          <span class="badge badge-neutral">Dropped</span>
+        {% endif %}
+
+        {# Overdue badge #}
+        {% if item.is_overdue %}
+          <span class="badge badge-danger" style="font-weight: 700;">Overdue {{ item.overdue_days }}d</span>
+        {% endif %}
+
+        {# Unassigned chip #}
+        {% if not item.owner_id %}
+          <span class="badge badge-warning" style="border: 1px dashed var(--warning-border);">Needs owner</span>
+        {% endif %}
+
+        {# Carried count chip #}
+        {% if item.carried_count > 0 %}
+          <span class="badge badge-warning" title="Carried forward {{ item.carried_count }} times from origin meeting">Carried {{ item.carried_count }}×</span>
+        {% endif %}
+
+        {# AI badge #}
+        {% if item.source in ('ai', 'heuristic') %}
+          <span class="badge badge-ai" title="AI generated proposal">
+            <svg width="12" height="12" aria-hidden="true"><use href="#icon-sparkle"/></svg> AI
+          </span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if item.description %}
+      <p class="text-sm text-muted" style="margin-top: 4px; margin-bottom: 0;">{{ item.description }}</p>
+    {% endif %}
+
+    {% if item.status == 'blocked' and item.blocked_reason %}
+      <div class="alert alert-danger" style="margin-top: 6px; padding: 4px 8px; font-size: 13px;">
+        <strong>Blocked:</strong> {{ item.blocked_reason }}
+      </div>
+    {% endif %}
+
+    {% if item.status in ('done', 'dropped') and item.outcome_type %}
+      <div class="text-sm text-muted" style="margin-top: 4px;">
+        <span class="text-semibold">{{ item.outcome_type | replace('_', ' ') | title }}:</span> {{ item.outcome_note }}
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="item-row-meta">
+    {# Owner avatar + name #}
+    <div class="item-owner-info">
+      {% if item.owner %}
+        <span class="avatar avatar-sm avatar-color-{{ (item.owner.id % 6) + 1 }}" title="{{ item.owner.name }}">
+          {{ item.owner.initials }}
+        </span>
+        <span class="text-sm">{{ item.owner.name }}</span>
+      {% else %}
+        <span class="text-sm text-muted" style="font-style: italic;">Unassigned</span>
+      {% endif %}
+    </div>
+
+    {# Due date #}
+    <div class="item-due-info">
+      {% if item.due_date %}
+        <span class="text-sm {% if item.is_overdue %}text-danger text-semibold{% else %}text-muted{% endif %}">
+          Due {{ item.due_date.strftime('%d %b %Y') }}
+        </span>
+      {% else %}
+        <span class="text-sm text-muted">No due date</span>
+      {% endif %}
+    </div>
+
+    {# Quick Action Link #}
+    <div class="item-actions">
+      <a href="/items/{{ item.id }}" class="btn btn-secondary btn-sm">View</a>
+    </div>
+  </div>
+</div>

@@ -16,7 +16,7 @@ from app.enums import Attendance, MeetingKind
 from app.errors import ValidationFailed
 from app.models.decision import Decision
 from app.schemas.meeting import MeetingCreate
-from app.services import meeting_service, people_service
+from app.services import carry_forward_service, meeting_service, people_service
 
 router = APIRouter(tags=["meetings"])
 templates = Jinja2Templates(directory="app/templates")
@@ -168,6 +168,17 @@ def meeting_detail_view(
     ctx = _get_base_context(request, db)
     all_people = people_service.list_people(db, active_only=True)
     existing_pids = {p.person_id for p in meeting.participants}
+    carried_items = carry_forward_service.get_carried_items(db, id)
+    other_meetings = [
+        m for m in meeting_service.list_meetings(db) if m.id != id and not m.is_closed
+    ]
+    open_items = [it for it in meeting.current_items if it.is_open]
+
+    # Collect meeting-related events
+    meeting_events = []
+    for it in meeting.current_items:
+        meeting_events.extend(it.events)
+    meeting_events.sort(key=lambda ev: ev.created_at, reverse=True)
 
     ctx.update(
         {
@@ -175,6 +186,10 @@ def meeting_detail_view(
             "active_tab": tab,
             "all_people": all_people,
             "existing_participant_ids": existing_pids,
+            "carried_items": carried_items,
+            "other_meetings": other_meetings,
+            "open_items": open_items,
+            "meeting_events": meeting_events,
             "page_title": meeting.title,
         }
     )

@@ -24,9 +24,11 @@ RUN useradd -u 10001 -m -s /bin/bash appuser && \
 COPY --chown=appuser:appuser app/ app/
 COPY --chown=appuser:appuser scripts/ scripts/
 
-# Build arguments for git SHA tracking
+# Build arguments for git SHA tracking (Render automatically passes RENDER_GIT_COMMIT)
+ARG RENDER_GIT_COMMIT=""
 ARG GIT_SHA=""
-ENV GIT_SHA=${GIT_SHA}
+ENV RENDER_GIT_COMMIT=${RENDER_GIT_COMMIT}
+ENV GIT_SHA=${GIT_SHA:-$RENDER_GIT_COMMIT}
 
 USER appuser
 

@@ -77,6 +77,9 @@ jobs:
           context: .
           push: false
           tags: loopclose:ci
+          build-args: |
+            RENDER_GIT_COMMIT=${{ github.sha }}
+            GIT_SHA=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -98,11 +101,29 @@ jobs:
           APP_URL: ${{ secrets.APP_URL }}
         run: |
           test -n "$APP_URL" || { echo "APP_URL secret missing"; exit 1; }
+          echo "Expected commit SHA: ${{ github.sha }}"
+          echo "Smoke test target: $APP_URL/health"
           for i in $(seq 1 36); do
-            body=$(curl -s --max-time 30 "$APP_URL/health" || true)
+            # Fetch response body and HTTP status code using curl -sSL --max-time 30
+            http_code=$(curl -sSL -o /tmp/health_resp.txt -w "%{http_code}" --max-time 30 "$APP_URL/health" || echo "000")
+            body=$(cat /tmp/health_resp.txt 2>/dev/null || echo "")
+            body_preview=$(echo "$body" | head -c 200 | tr -d '\n\r')
             commit=$(echo "$body" | jq -r '.commit // empty' 2>/dev/null || true)
-            echo "attempt $i: commit=${commit:-none}"
-            if [ "$commit" = "${{ github.sha }}" ]; then echo "Deployed OK"; exit 0; fi
+            db_status=$(echo "$body" | jq -r '.db // empty' 2>/dev/null || true)
+
+            echo "attempt $i: http_code=$http_code commit=${commit:-none} body_preview=[$body_preview]"
+
+            if [ "$commit" = "${{ github.sha }}" ]; then
+              echo "Deployment verified: commit matches ${{ github.sha }}"
+              exit 0
+            fi
+
+            if [ "$http_code" = "200" ] && [ "$db_status" = "ok" ] && [ -z "$commit" ]; then
+              echo "WARNING: /health returned HTTP 200 with db: ok, but commit is null/missing."
+            fi
+
             sleep 10
           done
-          echo "Deployment not confirmed in time"; exit 1
+          echo "Deployment not confirmed in time after 36 attempts (360s)."
+          exit 1
+

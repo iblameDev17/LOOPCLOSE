@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-main">
+    <h1 class="page-title">Action Items</h1>
+    <p class="text-muted">Track all commitments and actions to completion across meetings.</p>
+  </div>
+</div>
+
+{# Filter bar #}
+<div class="card" style="margin-bottom: 24px; padding: 16px;">
+  <form method="get" action="/items" class="filter-bar" id="items-filter-form">
+    <div class="filter-group">
+      <label for="filter-status" class="filter-label">Status</label>
+      <select name="status" id="filter-status" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">All statuses</option>
+        <option value="open" {% if current_status == 'open' %}selected{% endif %}>Open</option>
+        <option value="in_progress" {% if current_status == 'in_progress' %}selected{% endif %}>In progress</option>
+        <option value="blocked" {% if current_status == 'blocked' %}selected{% endif %}>Blocked</option>
+        <option value="done" {% if current_status == 'done' %}selected{% endif %}>Done</option>
+        <option value="dropped" {% if current_status == 'dropped' %}selected{% endif %}>Dropped</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label for="filter-owner" class="filter-label">Owner</label>
+      <select name="owner_id" id="filter-owner" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">All owners</option>
+        {% for p in people %}
+          <option value="{{ p.id }}" {% if current_owner_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label for="filter-meeting" class="filter-label">Meeting</label>
+      <select name="meeting_id" id="filter-meeting" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">All meetings</option>
+        {% for m in all_meetings %}
+          <option value="{{ m.id }}" {% if current_meeting_id == m.id %}selected{% endif %}>{{ m.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="filter-group filter-checkbox">
+      <label class="form-check-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer; padding-top: 20px;">
+        <input type="checkbox" name="overdue" value="true" {% if current_overdue %}checked{% endif %} onchange="this.form.submit()">
+        <span class="text-sm text-semibold text-danger">Overdue only</span>
+      </label>
+    </div>
+
+    <div class="filter-group" style="margin-left: auto;">
+      <label for="sort-by" class="filter-label">Sort by</label>
+      <select name="sort_by" id="sort-by" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="due_date" {% if sort_by == 'due_date' %}selected{% endif %}>Due date (earliest)</option>
+        <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>Recently created</option>
+      </select>
+    </div>
+
+    {% if current_status or current_owner_id or current_meeting_id or current_overdue %}
+      <div class="filter-group" style="padding-top: 18px;">
+        <a href="/items" class="btn btn-secondary btn-sm">Clear filters</a>
+      </div>
+    {% endif %}
+  </form>
+</div>
+
+{# Item list container #}
+<div class="card" style="padding: 0;">
+  {% if items %}
+    <div class="items-list">
+      {% for item in items %}
+        {% include "partials/item_row.html" %}
+      {% endfor %}
+    </div>
+    <div class="card-footer" style="padding: 12px 16px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-muted);">
+      Showing {{ total_count }} item{% if total_count != 1 %}s{% endif %}
+    </div>
+  {% else %}
+    <div class="empty-state" style="padding: 48px 16px; text-align: center;">
+      <svg width="48" height="48" style="stroke: var(--text-muted); stroke-width: 1.5; fill: none; margin-bottom: 12px;" aria-hidden="true">
+        <use href="#icon-check-circle"/>
+      </svg>
+      <h3>No action items found</h3>
+      <p class="text-muted">No items match your filter criteria.</p>
+      {% if current_status or current_owner_id or current_meeting_id or current_overdue %}
+        <a href="/items" class="btn btn-secondary btn-sm" style="margin-top: 12px;">Reset filters</a>
+      {% else %}
+        <a href="/meetings" class="btn btn-primary btn-sm" style="margin-top: 12px;">Go to Meetings to create items</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

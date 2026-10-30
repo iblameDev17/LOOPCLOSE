@@ -81,6 +81,12 @@ class ActionItem(Base):
             return False
         return self.due_date < date.today()
 
+    @property
+    def overdue_days(self) -> int:
+        if not self.is_overdue or self.due_date is None:
+            return 0
+        return (date.today() - self.due_date).days
+
 
 class ActionItemEvent(Base):
     __tablename__ = "action_item_events"
@@ -105,3 +111,4 @@ class ActionItemEvent(Base):
     )
 
     action_item: Mapped[ActionItem] = relationship("ActionItem", back_populates="events")
+    meeting: Mapped[Meeting | None] = relationship("Meeting", foreign_keys=[meeting_id])

@@ -14,7 +14,7 @@
       </div>
       {% if not meeting.is_closed %}
       <div>
-        <form hx-post="/meetings/{{ meeting.id }}/handover/reassign"
+        <form method="post" action="/meetings/{{ meeting.id }}/handover/reassign"
               hx-confirm="Reassign all of {{ meeting.handover_from.name }}'s open items to {{ meeting.handover_to.name }}?">
           <button type="submit" class="btn btn-primary btn-sm">
             Reassign All to {{ meeting.handover_to.name }}
@@ -22,6 +22,54 @@
         </form>
       </div>
       {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Closed Meeting Carry-Forward Prompt (FR-C3) -->
+  {% if meeting.is_closed and open_items %}
+  <div class="card mb-6" style="background: var(--warning-soft); border: 1px solid var(--warning-border); margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <strong style="color: var(--warning);">Carry forward unfinished items</strong>
+        <p class="text-sm text-muted" style="margin: 4px 0 0 0;">
+          {{ open_items | length }} open item{% if open_items | length != 1 %}s weren't{% else %} wasn't{% endif %} finished before this meeting was closed. Carry them to the next meeting's agenda:
+        </p>
+      </div>
+      {% if other_meetings %}
+      <form method="post" action="/meetings/{{ meeting.id }}/carry-forward" style="display: flex; gap: 8px; align-items: center;">
+        <select name="target_meeting_id" class="form-select form-select-sm" required style="max-width: 260px;">
+          <option value="">Select destination meeting…</option>
+          {% for m in other_meetings %}
+            <option value="{{ m.id }}">{{ m.title }} ({{ m.scheduled_at.strftime('%d %b') }})</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-warning btn-sm">Carry forward</button>
+        <a href="/meetings/new?previous_meeting_id={{ meeting.id }}" class="btn btn-secondary btn-sm">Create next</a>
+      </form>
+      {% else %}
+      <div>
+        <a href="/meetings/new?previous_meeting_id={{ meeting.id }}" class="btn btn-warning btn-sm">Create next meeting to carry items</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Carried-Over Section (FR-C2) -->
+  {% if carried_items %}
+  <div class="card mb-6" style="margin-bottom: 20px; border-left: 4px solid var(--warning);">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <h3 class="card-title" style="font-size: 15px;">Carried Over Items</h3>
+        <span class="badge badge-warning">{{ carried_items | length }} item{% if carried_items | length != 1 %}s{% endif %}</span>
+      </div>
+      <span class="text-xs text-muted">Carried over from earlier meetings in series</span>
+    </div>
+    <div class="items-list" style="padding: 0;">
+      {% for item in carried_items %}
+        {% include "partials/item_row.html" %}
+      {% endfor %}
     </div>
   </div>
   {% endif %}

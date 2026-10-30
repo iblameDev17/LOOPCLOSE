@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="breadcrumb" style="margin-bottom: 16px;">
+  <a href="/items" class="text-muted">Action Items</a>
+  <span class="text-muted" style="margin: 0 8px;">/</span>
+  <span>Item #{{ item.id }}</span>
+</div>
+
+<div class="page-header" style="align-items: flex-start; margin-bottom: 24px;">
+  <div class="page-header-main">
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <h1 class="page-title" style="margin-bottom: 0;">{{ item.title }}</h1>
+      
+      {# Badges row #}
+      <div class="badges-row">
+        {% if item.status == 'open' %}
+          <span class="badge badge-info">Open</span>
+        {% elif item.status == 'in_progress' %}
+          <span class="badge badge-warning">In progress</span>
+        {% elif item.status == 'blocked' %}
+          <span class="badge badge-danger">Blocked</span>
+        {% elif item.status == 'done' %}
+          <span class="badge badge-success">Done</span>
+        {% elif item.status == 'dropped' %}
+          <span class="badge badge-neutral">Dropped</span>
+        {% endif %}
+
+        {% if item.is_overdue %}
+          <span class="badge badge-danger">Overdue {{ item.overdue_days }}d</span>
+        {% endif %}
+
+        {% if not item.owner_id %}
+          <span class="badge badge-warning" style="border: 1px dashed var(--warning-border);">Needs owner</span>
+        {% endif %}
+
+        {% if item.carried_count > 0 %}
+          <span class="badge badge-warning">Carried {{ item.carried_count }}×</span>
+        {% endif %}
+
+        {% if item.source in ('ai', 'heuristic') %}
+          <span class="badge badge-ai"><svg width="12" height="12"><use href="#icon-sparkle"/></svg> AI</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="page-header-actions" style="display: flex; gap: 8px;">
+    {% if item.status in ('done', 'dropped') %}
+      <form method="post" action="/items/{{ item.id }}/reopen">
+        <button type="submit" class="btn btn-secondary btn-sm">Reopen item</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if close_error is defined and close_error %}
+  <div class="alert alert-danger" style="margin-bottom: 20px;">
+    <strong>Error:</strong> {{ close_error }}
+  </div>
+{% endif %}
+
+<div class="grid grid-2" style="grid-template-columns: 2fr 1fr; gap: 24px;">
+  {# MAIN COLUMN #}
+  <div class="main-column" style="display: flex; flex-direction: column; gap: 24px;">
+    {# Description card #}
+    <div class="card">
+      <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 16px;">Description</h3>
+      {% if item.description %}
+        <p style="white-space: pre-wrap; margin-bottom: 0;">{{ item.description }}</p>
+      {% else %}
+        <p class="text-muted" style="font-style: italic; margin-bottom: 0;">No description provided.</p>
+      {% endif %}
+
+      {% if item.status == 'blocked' and item.blocked_reason %}
+        <div class="alert alert-danger" style="margin-top: 16px; margin-bottom: 0;">
+          <strong>Blocked reason:</strong> {{ item.blocked_reason }}
+        </div>
+      {% endif %}
+
+      {% if item.status in ('done', 'dropped') and item.outcome_type %}
+        <div class="alert alert-success" style="margin-top: 16px; margin-bottom: 0;">
+          <strong>Outcome ({{ item.outcome_type | replace('_', ' ') | title }}):</strong> {{ item.outcome_note }}
+        </div>
+      {% endif %}
+    </div>
+
+    {# Actions card #}
+    {% if item.is_open %}
+      <div class="card">
+        <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px;">Action Controls</h3>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+          {# In progress button #}
+          {% if item.status != 'in_progress' %}
+            <form method="post" action="/items/{{ item.id }}/status">
+              <input type="hidden" name="status" value="in_progress">
+              <button type="submit" class="btn btn-secondary btn-sm">Start progress</button>
+            </form>
+          {% endif %}
+
+          {# Open button if in_progress or blocked #}
+          {% if item.status != 'open' %}
+            <form method="post" action="/items/{{ item.id }}/status">
+              <input type="hidden" name="status" value="open">
+              <button type="submit" class="btn btn-secondary btn-sm">Mark open</button>
+            </form>
+          {% endif %}
+
+          <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('block-panel').classList.toggle('hidden')">
+            {% if item.status == 'blocked' %}Edit block reason{% else %}Block item{% endif %}
+          </button>
+
+          <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('reassign-panel').classList.toggle('hidden')">
+            Reassign owner
+          </button>
+
+          <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('edit-panel').classList.toggle('hidden')">
+            Edit details
+          </button>
+
+          <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('close-panel').classList.toggle('hidden')">
+            Close with outcome
+          </button>
+        </div>
+
+        {# Inline Block Panel #}
+        <div id="block-panel" class="hidden" style="margin-top: 16px; padding: 16px; background: var(--surface-2); border-radius: 8px; border: 1px solid var(--border);">
+          <h4 style="margin-top: 0; margin-bottom: 8px; font-size: 14px;">Block Action Item</h4>
+          <form method="post" action="/items/{{ item.id }}/status">
+            <input type="hidden" name="status" value="blocked">
+            <div class="form-group">
+              <label for="blocked_reason" class="form-label">Say what is blocking this (3+ characters)</label>
+              <input type="text" id="blocked_reason" name="blocked_reason" class="form-input" value="{{ item.blocked_reason or '' }}" required minlength="3">
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="submit" class="btn btn-danger btn-sm">Save Block</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('block-panel').classList.add('hidden')">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        {# Inline Reassign Panel #}
+        <div id="reassign-panel" class="hidden" style="margin-top: 16px; padding: 16px; background: var(--surface-2); border-radius: 8px; border: 1px solid var(--border);">
+          <h4 style="margin-top: 0; margin-bottom: 8px; font-size: 14px;">Reassign Item</h4>
+          <form method="post" action="/items/{{ item.id }}/reassign">
+            <div class="form-group">
+              <label for="new_owner_id" class="form-label">New Owner</label>
+              <select id="new_owner_id" name="owner_id" class="form-select">
+                <option value="">Unassigned</option>
+                {% for p in active_people %}
+                  <option value="{{ p.id }}" {% if item.owner_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="submit" class="btn btn-primary btn-sm">Confirm Reassignment</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('reassign-panel').classList.add('hidden')">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        {# Inline Edit Details Panel #}
+        <div id="edit-panel" class="hidden" style="margin-top: 16px; padding: 16px; background: var(--surface-2); border-radius: 8px; border: 1px solid var(--border);">
+          <h4 style="margin-top: 0; margin-bottom: 8px; font-size: 14px;">Edit Item Details</h4>
+          <form method="post" action="/items/{{ item.id }}/edit">
+            <div class="form-group">
+              <label for="edit_title" class="form-label">Title</label>
+              <input type="text" id="edit_title" name="title" class="form-input" value="{{ item.title }}" required minlength="3">
+            </div>
+            <div class="grid grid-2" style="gap: 12px;">
+              <div class="form-group">
+                <label for="edit_due" class="form-label">Due Date</label>
+                <input type="date" id="edit_due" name="due_date" class="form-input" value="{{ item.due_date.isoformat() if item.due_date else '' }}">
+              </div>
+              <div class="form-group">
+                <label for="edit_prio" class="form-label">Priority</label>
+                <select id="edit_prio" name="priority" class="form-select">
+                  <option value="low" {% if item.priority == 'low' %}selected{% endif %}>Low</option>
+                  <option value="medium" {% if item.priority == 'medium' %}selected{% endif %}>Medium</option>
+                  <option value="high" {% if item.priority == 'high' %}selected{% endif %}>High</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="edit_desc" class="form-label">Description</label>
+              <textarea id="edit_desc" name="description" class="form-textarea" rows="2">{{ item.description or '' }}</textarea>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('edit-panel').classList.add('hidden')">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        {# Expanding Close With Outcome Panel #}
+        <div id="close-panel" class="hidden" style="margin-top: 16px; padding: 16px; background: var(--surface-2); border-radius: 8px; border: 2px solid var(--primary-border);">
+          <h4 style="margin-top: 0; margin-bottom: 8px; font-size: 14px; color: var(--primary);">Close With Outcome</h4>
+          <p class="text-sm text-muted" style="margin-bottom: 12px;">Items can only be closed by recording the outcome.</p>
+          <form method="post" action="/items/{{ item.id }}/close">
+            <div class="form-group">
+              <label for="outcome_type" class="form-label">Outcome Type</label>
+              <select id="outcome_type" name="outcome_type" class="form-select" required>
+                <option value="completed">Completed (done)</option>
+                <option value="partially_completed">Partially completed (done)</option>
+                <option value="dropped">Dropped (dropped)</option>
+                <option value="superseded">Superseded (dropped)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="outcome_note" class="form-label">Outcome Note (5+ characters)</label>
+              <textarea id="outcome_note" name="outcome_note" class="form-textarea" rows="3" placeholder="Explain what was accomplished or why this was dropped..." required minlength="5"></textarea>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="submit" class="btn btn-primary btn-sm">Confirm Close</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('close-panel').classList.add('hidden')">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+
+    {# History Timeline card #}
+    <div class="card">
+      <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px;">History & Audit Timeline</h3>
+      {% if item.events %}
+        <div class="timeline">
+          {% for ev in item.events | sort(attribute='created_at', reverse=true) %}
+            <div class="timeline-entry">
+              <div class="timeline-dot event-{{ ev.event_type }}"></div>
+              <div class="timeline-content">
+                <div class="timeline-header">
+                  <strong>{{ ev.event_type | replace('_', ' ') | title }}</strong>
+                  <span class="timeline-time">{{ ev.created_at.strftime('%d %b %Y, %H:%M') }}</span>
+                </div>
+                <div class="text-sm text-muted">
+                  By {{ ev.actor }}
+                  {% if ev.from_value and ev.to_value %}
+                    &middot; {{ ev.from_value }} &rarr; {{ ev.to_value }}
+                  {% elif ev.to_value %}
+                    &middot; {{ ev.to_value }}
+                  {% endif %}
+                  {% if ev.meeting %}
+                    &middot; in <a href="/meetings/{{ ev.meeting.id }}" class="text-muted">{{ ev.meeting.title }}</a>
+                  {% endif %}
+                </div>
+                {% if ev.note %}
+                  <div class="timeline-note">{{ ev.note }}</div>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted">No events recorded.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {# SIDE CARD #}
+  <div class="side-column">
+    <div class="card" style="padding: 20px;">
+      <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px;">Metadata</h3>
+      
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        {# Owner #}
+        <div>
+          <div class="text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Owner</div>
+          {% if item.owner %}
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="avatar avatar-sm avatar-color-{{ (item.owner.id % 6) + 1 }}">
+                {{ item.owner.initials }}
+              </span>
+              <span>{{ item.owner.name }}</span>
+            </div>
+          {% else %}
+            <span class="badge badge-warning" style="border: 1px dashed var(--warning-border);">Needs owner</span>
+          {% endif %}
+        </div>
+
+        {# Due Date #}
+        <div>
+          <div class="text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Due Date</div>
+          {% if item.due_date %}
+            <span class="{% if item.is_overdue %}text-danger text-semibold{% endif %}">
+              {{ item.due_date.strftime('%d %B %Y') }}
+              {% if item.is_overdue %}(Overdue {{ item.overdue_days }}d){% endif %}
+            </span>
+          {% else %}
+            <span class="text-muted">None set</span>
+          {% endif %}
+        </div>
+
+        {# Priority #}
+        <div>
+          <div class="text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Priority</div>
+          <span class="badge badge-secondary">{{ item.priority | title }}</span>
+        </div>
+
+        {# Origin Meeting #}
+        <div>
+          <div class="text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Origin Meeting</div>
+          <a href="/meetings/{{ item.origin_meeting_id }}" class="text-primary">
+            {{ item.origin_meeting.title }}
+          </a>
+        </div>
+
+        {# Current Meeting #}
+        <div>
+          <div class="text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Current Meeting</div>
+          {% if item.current_meeting %}
+            <a href="/meetings/{{ item.current_meeting_id }}" class="text-primary">
+              {{ item.current_meeting.title }}
+            </a>
+          {% else %}
+            <span class="text-muted">None</span>
+          {% endif %}
+        </div>
+
+        {# Carried count #}
+        <div>
+          <div class="text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Carried Count</div>
+          <span>{{ item.carried_count }} time{% if item.carried_count != 1 %}s{% endif %}</span>
+        </div>
+
+        {# Created at #}
+        <div>
+          <div class="text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Created</div>
+          <span class="text-sm text-muted">{{ item.created_at.strftime('%d %b %Y, %H:%M UTC') }}</span>
+        </div>
+
+        {# Closed at #}
+        {% if item.closed_at %}
+          <div>
+            <div class="text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Closed</div>
+            <span class="text-sm text-muted">{{ item.closed_at.strftime('%d %b %Y, %H:%M UTC') }}</span>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

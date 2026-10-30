@@ -349,16 +349,36 @@ def delete_decision(db: Session, decision_id: int) -> None:
     log_event(logger, "meeting.decision_deleted", meeting_id=mid, decision_id=decision_id)
 
 
-def reassign_handover_items_stub(db: Session, meeting_id: int) -> int:
-    """Stub for handover item bulk-reassign (completed in Unit 4)."""
+def reassign_handover_items(db: Session, meeting_id: int, actor: str = "user") -> int:
+    """Bulk reassign all open items from handover_from person to handover_to person."""
+    from app.services import action_item_service
+
     meeting = get_meeting(db, meeting_id)
     if not meeting.is_handover or not meeting.handover_from_id or not meeting.handover_to_id:
         return 0
+
+    from_id = meeting.handover_from_id
+    to_id = meeting.handover_to_id
+
+    # Find all open items currently owned by the departing person
+    open_items = action_item_service.list_action_items(db, owner_id=from_id)
+    open_items = [it for it in open_items if it.is_open]
+
+    reassigned_count = 0
+    for item in open_items:
+        action_item_service.reassign_action_item(db, item.id, to_id, actor=actor)
+        reassigned_count += 1
 
     log_event(
         logger,
         "meeting.handover_reassign",
         meeting_id=meeting.id,
-        count=0,
+        from_id=from_id,
+        to_id=to_id,
+        count=reassigned_count,
     )
-    return 0
+    return reassigned_count
+
+
+# Alias for backward-compatibility with Unit 3 router stubs
+reassign_handover_items_stub = reassign_handover_items

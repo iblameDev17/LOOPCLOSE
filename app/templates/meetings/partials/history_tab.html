@@ -1,10 +1,44 @@
 <div id="history-tab-content" class="card">
-  <div class="card-header">
-    <h2 class="card-title">Meeting Event History</h2>
+  <div class="card-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border);">
+    <h3 class="card-title" style="font-size: 16px;">Meeting & Action Item Event History</h3>
   </div>
-  <div style="padding: 32px; text-align: center;">
-    <svg width="40" height="40" class="text-muted" aria-hidden="true" style="margin-bottom: 12px;"><use href="#icon-calendar"/></svg>
-    <div style="font-weight: 600; margin-bottom: 4px;">Lifecycle Event Log</div>
-    <p class="text-muted small" style="margin-bottom: 16px;">Audit trail of status changes, carry-forwards, and item mutations is scheduled for Unit 4.</p>
+  
+  <div style="padding: 20px;">
+    {% if meeting_events %}
+      <div class="timeline">
+        {% for ev in meeting_events %}
+          <div class="timeline-entry">
+            <div class="timeline-dot event-{{ ev.event_type }}"></div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <strong>{{ ev.event_type | replace('_', ' ') | title }}</strong>
+                <span class="timeline-time">{{ ev.created_at.strftime('%d %b %Y, %H:%M') }}</span>
+              </div>
+              <div class="text-sm text-muted">
+                Action item #{{ ev.action_item_id }}
+                {% if ev.action_item is defined and ev.action_item %}
+                  (<a href="/items/{{ ev.action_item_id }}" class="text-primary">{{ ev.action_item.title }}</a>)
+                {% endif %}
+                &middot; by {{ ev.actor }}
+                {% if ev.from_value and ev.to_value %}
+                  &middot; {{ ev.from_value }} &rarr; {{ ev.to_value }}
+                {% elif ev.to_value %}
+                  &middot; {{ ev.to_value }}
+                {% endif %}
+              </div>
+              {% if ev.note %}
+                <div class="timeline-note">{{ ev.note }}</div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: 32px 16px; text-align: center;">
+        <svg width="40" height="40" class="text-muted" aria-hidden="true" style="margin-bottom: 12px;"><use href="#icon-calendar"/></svg>
+        <div class="text-sm font-semibold">No event history yet</div>
+        <p class="text-xs text-muted" style="margin-bottom: 0;">Mutations on action items and meeting milestones will appear here in the chronological timeline.</p>
+      </div>
+    {% endif %}
   </div>
 </div>
