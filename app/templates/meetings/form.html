@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}New Meeting — LoopClose{% endblock %}
+
+{% block content %}
+<div style="max-width: 720px; margin: 0 auto;">
+  <div class="page-header" style="margin-bottom: 24px;">
+    <h1 class="page-title">New Meeting or Handover</h1>
+    <p class="text-muted">Set up an agenda, participants, or transition work between team members.</p>
+  </div>
+
+  <div class="card">
+    {% if error %}
+    <div class="banner banner-danger mb-4" role="alert" style="margin-bottom: 20px;">
+      <svg width="16" height="16" aria-hidden="true"><use href="#icon-alert-triangle"/></svg>
+      <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <form method="post" action="/meetings" id="meeting-form">
+      <!-- Kind Selector -->
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label class="label">Event Kind</label>
+        <div style="display: flex; gap: 16px;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 16px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface);">
+            <input type="radio" name="kind" value="meeting" {% if not form_data or form_data.kind == 'meeting' %}checked{% endif %}
+                   onchange="toggleHandover(false)">
+            <span><strong>Regular Meeting</strong></span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 16px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface);">
+            <input type="radio" name="kind" value="handover" {% if form_data and form_data.kind == 'handover' %}checked{% endif %}
+                   onchange="toggleHandover(true)">
+            <span><strong>Work Handover</strong></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Title -->
+      <div class="form-group" style="margin-bottom: 18px;">
+        <label for="title" class="label">Title</label>
+        <input type="text" id="title" name="title" class="input" required minlength="3" maxlength="200"
+               value="{{ form_data.title if form_data else '' }}" placeholder="e.g. Sprint 24 Planning or Client Handover">
+      </div>
+
+      <!-- Scheduled Date & Time -->
+      <div class="form-group" style="margin-bottom: 18px;">
+        <label for="scheduled_at" class="label">Scheduled Date & Time</label>
+        <input type="datetime-local" id="scheduled_at" name="scheduled_at" class="input" required
+               value="{{ form_data.scheduled_at if form_data else '' }}">
+      </div>
+
+      <!-- Handover Section (conditionally visible) -->
+      <div id="handover-section" style="{% if not form_data or form_data.kind != 'handover' %}display: none;{% endif %} background: var(--surface-2); padding: 16px; border-radius: 8px; margin-bottom: 18px; border: 1px solid var(--border);">
+        <h3 style="font-size: 15px; margin-bottom: 12px; font-weight: 600;">Handover Partners</h3>
+        <div class="grid grid-cols-2 gap-4" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <label for="handover_from_id" class="label">Handing Over (From)</label>
+            <select id="handover_from_id" name="handover_from_id" class="input">
+              <option value="">Select person…</option>
+              {% for p in active_people %}
+              <option value="{{ p.id }}" {% if form_data and form_data.handover_from_id == p.id|string %}selected{% endif %}>
+                {{ p.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="handover_to_id" class="label">Taking Over (To)</label>
+            <select id="handover_to_id" name="handover_to_id" class="input">
+              <option value="">Select person…</option>
+              {% for p in active_people %}
+              <option value="{{ p.id }}" {% if form_data and form_data.handover_to_id == p.id|string %}selected{% endif %}>
+                {{ p.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agenda -->
+      <div class="form-group" style="margin-bottom: 18px;">
+        <label for="agenda" class="label">Agenda <span class="text-muted" style="font-weight: normal;">(optional, max 5,000 chars)</span></label>
+        <textarea id="agenda" name="agenda" class="textarea" rows="4" maxlength="5000"
+                  placeholder="Outline topics to discuss, goals, or handover scope…">{{ form_data.agenda if form_data else '' }}</textarea>
+      </div>
+
+      <!-- Participants Checklist -->
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label class="label">Participants</label>
+        <div style="border: 1px solid var(--border-strong); border-radius: 6px; padding: 12px; max-height: 200px; overflow-y: auto;">
+          {% for p in active_people %}
+          <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer;">
+            <input type="checkbox" name="participant_ids" value="{{ p.id }}"
+                   {% if form_data and p.id|string in form_data.get('participant_ids', []) %}checked{% endif %}>
+            <span class="avatar avatar-xs" style="background-color: var(--primary-soft); color: var(--primary);">{{ p.initials }}</span>
+            <span>{{ p.name }} <small class="text-muted">({{ p.role_title or "Member" }})</small></span>
+          </label>
+          {% endfor %}
+          {% if not active_people %}
+          <div class="text-muted small">No active people found. <a href="/people">Add someone</a> first.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Previous Meeting Series Link -->
+      <div class="form-group" style="margin-bottom: 24px;">
+        <label for="previous_meeting_id" class="label">Continue from previous meeting <span class="text-muted" style="font-weight: normal;">(optional)</span></label>
+        <select id="previous_meeting_id" name="previous_meeting_id" class="input">
+          <option value="">None (stand-alone meeting)</option>
+          {% for prev in recent_meetings %}
+          <option value="{{ prev.id }}" {% if form_data and form_data.previous_meeting_id == prev.id|string %}selected{% endif %}>
+            {{ prev.title }} ({{ prev.scheduled_at.strftime("%d %b %Y") }})
+          </option>
+          {% endfor %}
+        </select>
+        <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px; cursor: pointer;">
+          <input type="checkbox" name="carry_forward_open_items" value="true" checked>
+          <span class="small text-muted">Carry forward open items from the previous meeting</span>
+        </label>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <a href="/meetings" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">Create Meeting</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function toggleHandover(isHandover) {
+  const section = document.getElementById("handover-section");
+  if (section) {
+    section.style.display = isHandover ? "block" : "none";
+  }
+}
+</script>
+{% endblock %}

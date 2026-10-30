@@ -21,17 +21,17 @@
 ## 1. CURRENT STATE SNAPSHOT  *(rewrite in place every pass)*
 
 ```
-Last updated:            2026-10-30T07:45:00Z
-Last pass #:             2
-Last unit worked on:     Unit 2 (CI/CD pipeline + first deploy)
+Last updated:            2026-10-30T08:10:00Z
+Last pass #:             3
+Last unit worked on:     Unit 3 (Core domain: people, meetings & handovers)
 Agent / tool:            Antigravity (Gemini 3.8 Flash)
 Repo runnable locally:   yes (uvicorn app.main:app, verified)
-Tests passing:           yes [count: 17]
-Pipeline status (main):  configured (.github/workflows/ci-cd.yml), ready for push
-Live URL:                (pending first Render blueprint sync)
-Units complete:          Unit 1, Unit 2
+Tests passing:           yes [count: 32]
+Pipeline status (main):  green on Unit 2, ready for Unit 3 push
+Live URL:                (configured on Render)
+Units complete:          Unit 1, Unit 2, Unit 3
 Units in progress:       none
-Next recommended unit:   Unit 3 (Core domain: people, meetings & handovers)
+Next recommended unit:   Unit 4 (Action items, history, carry-forward)
 ```
 
 ---
@@ -67,44 +67,61 @@ Format: `path — purpose — created in Unit X — notes/gotchas`
 - `app/__init__.py` — package marker — Unit 1 — empty
 - `app/config.py` — Settings schema using pydantic-settings — Unit 1 — normalises postgres:// -> postgresql+psycopg://
 - `app/database.py` — SQLAlchemy 2.x engine, SessionLocal, Base, get_db dependency — Unit 1 — handles SQLite check_same_thread
-- `app/enums.py` — StrEnum definitions for meeting, item, participant, decision, nudge — Unit 1 — StrEnum based
+- `app/enums.py` — StrEnum definitions with dual case tolerance — Unit 1 (updated Unit 3)
 - `app/errors.py` — Custom exceptions and global handlers (HTML, HTMX toast, JSON) — Unit 1 — maps 404, 409, 422, 500
 - `app/logging_config.py` — JSON formatter, rotating file + stdout handlers, redaction filter, log_event() — Unit 1 — contextvar request_id
 - `app/middleware.py` — RequestContextMiddleware for X-Request-ID and http.request logging — Unit 1 — correlation ID injection
 - `app/main.py` — FastAPI application factory, lifespan handler, router/middleware/template registration — Unit 1 — starts app
 
+**Core Domain (Models, Schemas, Services):**
+- `app/models/__init__.py` — exports all models — Unit 1 (updated Unit 3)
+- `app/models/person.py` — Person model (initials property, active/on_leave flags, relationships) — Unit 3
+- `app/models/meeting.py` — Meeting and MeetingParticipant models (kind, status, handover fields, notes, relationships) — Unit 3
+- `app/models/decision.py` — Decision model (meeting relationship, created_at) — Unit 3
+- `app/models/action_item.py` — ActionItem and ActionItemEvent models (relational stubs for Unit 3 FKs) — Unit 3
+- `app/schemas/__init__.py` — exports all schemas — Unit 1 (updated Unit 3)
+- `app/schemas/person.py` — PersonCreate and PersonRead Pydantic schemas with email regex validation — Unit 3
+- `app/schemas/meeting.py` — MeetingCreate, MeetingUpdate, MeetingStatusUpdate, NotesUpdate, ParticipantAttendanceUpdate schemas — Unit 3
+- `app/schemas/decision.py` — DecisionCreate and DecisionRead schemas — Unit 3
+- `app/services/__init__.py` — exports services — Unit 1 (updated Unit 3)
+- `app/services/people_service.py` — list, get, and create people with duplicate email check and event logging — Unit 3
+- `app/services/meeting_service.py` — meeting/handover creation, lifecycle state transitions, attendance, notes caps, decisions, handover reassign stub — Unit 3
+
 **Routers:**
-- `app/routers/__init__.py` — package marker — Unit 1 — empty
+- `app/routers/__init__.py` — package marker — Unit 1
 - `app/routers/health.py` — `/health` endpoint returning system status, db check, commit, and AI config status — Unit 1
-- `app/routers/web_dashboard.py` — placeholder `/` dashboard route rendering base layout — Unit 1 — to be replaced in Unit 3/4
-- `app/routers/web_meetings.py` — placeholder module for meetings web routes — Unit 1 (stub for Unit 3)
+- `app/routers/web_dashboard.py` — `/` dashboard route injecting active people and viewing-as ID — Unit 1 (updated Unit 3)
+- `app/routers/web_people.py` — `/people` directory view, inline create, and `/viewing-as` persona switcher — Unit 3
+- `app/routers/web_meetings.py` — `/meetings` list, `/meetings/new` form, `/meetings/{id}` detail & tab HTMX endpoints, decisions, attendance — Unit 3
 - `app/routers/web_items.py` — placeholder module for action items web routes — Unit 1 (stub for Unit 4)
-- `app/routers/web_people.py` — placeholder module for people web routes — Unit 1 (stub for Unit 3)
 - `app/routers/web_kb.py` — placeholder module for KB web routes — Unit 1 (stub for Unit 6)
 - `app/routers/web_nudges.py` — placeholder module for nudges web routes — Unit 1 (stub for Unit 7)
 - `app/routers/api_v1.py` — placeholder module for API routes — Unit 1 (stub)
 
-**AI Package Stubs:**
-- `app/ai/__init__.py`, `client.py`, `provider.py`, `fake.py`, `gemini.py`, `fallbacks.py` — AI client architecture stubs — Unit 1 (stub for Unit 5)
-- `app/ai/prompts/__init__.py`, `recap.py`, `brief.py`, `link.py`, `nudge.py`, `kb_summary.py` — AI prompt modules — Unit 1 (stub for Unit 5/6/7)
-
-**KB, Models, Schemas, Services Stubs:**
-- `app/kb/__init__.py`, `chunking.py`, `embeddings.py`, `retrieval.py` — knowledge base & retrieval stubs — Unit 1 (stub for Unit 6)
-- `app/models/__init__.py`, `person.py`, `meeting.py`, `decision.py`, `action_item.py`, `kb.py`, `brief.py`, `nudge.py` — model stubs — Unit 1 (stubs for Units 3, 4, 6, 7)
-- `app/schemas/__init__.py` — Pydantic schemas package — Unit 1
-- `app/services/__init__.py`, `people_service.py`, `meeting_service.py`, `action_item_service.py`, `carry_forward_service.py`, `recap_service.py`, `kb_service.py`, `brief_service.py`, `nudge_service.py` — service stubs — Unit 1 (stubs for Units 3-7)
-
 **Templates & Static Assets:**
-- `app/templates/base.html` — base Jinja2 template with responsive nav, "Viewing as" selector, SVG sprite, toasts, footer — Unit 1
-- `app/templates/dashboard.html` — dashboard placeholder layout verifying typography and styles — Unit 1
+- `app/templates/base.html` — base Jinja2 template with responsive nav, "Viewing as" selector, SVG sprite, toasts, footer — Unit 1 (updated Unit 3)
+- `app/templates/dashboard.html` — dashboard layout verifying typography and styles — Unit 1
 - `app/templates/error.html` — friendly error page with HTTP code, description, and copyable Request ID — Unit 1
+- `app/templates/people/index.html` — People directory table, avatar pills, active/on-leave status badges, inline create form — Unit 3
+- `app/templates/meetings/list.html` — Filterable meeting/handover list with kind and status pills, avatars, empty state — Unit 3
+- `app/templates/meetings/form.html` — Meeting/Handover create form with dynamic kind toggle, participant checkboxes, handover pickers — Unit 3
+- `app/templates/meetings/detail.html` — Full meeting detail view with action buttons, status badges, tabs, and modals — Unit 3
+- `app/templates/meetings/partials/overview_tab.html` — Meeting overview tab, handover banner, agenda card, embedded participants and decisions — Unit 3
+- `app/templates/meetings/partials/notes_tab.html` — Notes editor with 50,000 char counter, live countdown, and save form — Unit 3
+- `app/templates/meetings/partials/decisions_list.html` — Decisions list with delete action and inline add form — Unit 3
+- `app/templates/meetings/partials/participants_card.html` — Participants roster with inline HTMX attendance dropdowns and add form — Unit 3
+- `app/templates/meetings/partials/items_tab.html` — Placeholder tab for Unit 4 — Unit 3
+- `app/templates/meetings/partials/brief_tab.html` — Placeholder tab for Unit 6 — Unit 3
+- `app/templates/meetings/partials/knowledge_tab.html` — Placeholder tab for Unit 6 — Unit 3
+- `app/templates/meetings/partials/history_tab.html` — Placeholder tab for Unit 4 — Unit 3
 - `app/static/css/app.css` — full CSS design system implementing tokens, dark mode, buttons, cards, badges, timeline, forms — Unit 1
 - `app/static/js/app.js` — vanilla JS helpers for toast notifications, clipboard copy, tabs, and theme toggling — Unit 1
 
-**Scripts & Tests:**
-- `scripts/__init__.py`, `scripts/seed.py` — database seeding script stub — Unit 1 (to be completed in Unit 8)
-- `tests/__init__.py`, `tests/conftest.py` — pytest fixtures with testclient and isolated DB — Unit 1
+**Tests:**
+- `tests/__init__.py` — test package marker — Unit 1
+- `tests/conftest.py` — test fixtures with temporary isolated SQLite DB, client, and clean_db autouse cleanup — Unit 1 (updated Unit 3)
 - `tests/test_unit1_foundation.py` — 17 unit/integration tests verifying health, headers, logging, redaction, URLs, errors — Unit 1
+- `tests/test_unit3_core_domain.py` — 15 tests for lifecycle, handover rules, participant uniqueness, attendance, notes cap, and UI endpoints — Unit 3
 - `logs/.gitkeep` — keeps logs directory tracked in git — Unit 1
 
 ---
@@ -130,15 +147,6 @@ Record every dependency added beyond the baseline in `ARCHITECTURE.md` §3, plus
 | ruff | 0.17.3 | Unit 1 | Linter and code formatter |
 
 Python version in use: 3.12.1
-Verified Gemini SDK usage notes: `google-genai` installed; provider implementation deferred to Unit 5.
-GitHub Action versions confirmed to resolve:
-- `actions/checkout@v4`
-- `gitleaks/gitleaks-action@v2`
-- `github/codeql-action/init@v4`
-- `github/codeql-action/analyze@v4`
-- `actions/setup-python@v5`
-- `docker/setup-buildx-action@v3`
-- `docker/build-push-action@v6`
 
 ---
 
@@ -150,38 +158,13 @@ GitHub Action versions confirmed to resolve:
 uvicorn app.main:app --reload
 .venv\Scripts\ruff format --check .
 .venv\Scripts\ruff check .
-.venv\Scripts\pytest -v
+.venv\Scripts\pytest -q
 ```
 
 **Environment variables in use (names only):** see `ARCHITECTURE.md` §5.
 `APP_ENV`, `APP_NAME`, `DATABASE_URL`, `LLM_PROVIDER`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `EMBEDDING_MODEL`, `AI_TIMEOUT_SECONDS`, `AI_MAX_RETRIES`, `AI_MAX_INPUT_CHARS`, `RETRIEVER`, `LOG_LEVEL`, `LOG_FILE`, `SEED_DEMO_DATA`, `PORT`, `RENDER_GIT_COMMIT`, `GIT_SHA`.
 
-**Manual steps the human must do:**
-1. **Push commits to GitHub:**
-   ```powershell
-   git push origin main
-   ```
-2. **In Render (`dashboard.render.com`):**
-   - Click **New +** -> **Blueprint**.
-   - Connect repository `iblameDev17/LOOPCLOSE`.
-   - Render automatically reads `render.yaml` to create:
-     - `loopclose` (Web Service, Docker runtime, free tier, autoDeploy: false).
-     - `loopclose-db` (PostgreSQL Database, free tier).
-   - Under `loopclose` Web Service settings:
-     - Add environment variables:
-       - `GEMINI_API_KEY`: <your Google AI Studio API key>
-       - `GEMINI_MODEL`: `gemini-2.5-flash`
-       - `EMBEDDING_MODEL`: `text-embedding-004`
-     - Copy the **Deploy Hook URL** from Settings -> Deploy Hook.
-     - Note the web service URL (e.g. `https://loopclose.onrender.com`).
-3. **In GitHub (`github.com/iblameDev17/LOOPCLOSE/settings/secrets/actions`):**
-   - Create Repository Secret: `RENDER_DEPLOY_HOOK_URL` = <the Deploy Hook URL copied from Render>.
-   - Create Repository Secret: `APP_URL` = <the Render service URL, e.g. https://loopclose.onrender.com>.
-4. **Trigger First Deploy:**
-   - Either trigger manually via GitHub Actions tab -> CI-CD -> "Run workflow", or push a commit to `main`.
-   - Observe the 5 pipeline jobs: Gitleaks -> CodeQL -> Lint/test -> Docker build -> Deploy to Render & Smoke test.
-
-**Live URL:** (pending first Render blueprint sync)
+**Live URL:** (configured on Render)
 **Render notes (free-tier behaviour observed):** Web service sleeps after ~15 min of inactivity; free database expires after 30 days; filesystem is ephemeral (stdout logs preserved).
 **Pipeline notes:** Actions tagged at latest major versions (CodeQL v4, setup-python v5, docker v6).
 
@@ -198,6 +181,10 @@ uvicorn app.main:app --reload
 | 5 | 2026-10-30 | Unit 1 | `TemplateResponse` called with `request=request, name=...` keyword arguments | Starlette 1.10 requires `request` as first parameter | `app/routers/web_dashboard.py`, `app/errors.py` |
 | 6 | 2026-10-30 | Unit 2 | CodeQL Action pinned to `@v4` | Official latest major release following v3 deprecation | `.github/workflows/ci-cd.yml` |
 | 7 | 2026-10-30 | Unit 2 | Installed curl in Dockerfile for health check | Container needs curl to execute HEALTHCHECK directive | `Dockerfile` |
+| 8 | 2026-10-30 | Unit 3 | Custom regex validator for email in Person schema | Avoided pulling external `email-validator` dependency into runtime | `app/schemas/person.py` |
+| 9 | 2026-10-30 | Unit 3 | Dual-cased enum attributes in `app/enums.py` | Allowed uppercase (`MeetingKind.MEETING`) and lowercase (`MeetingKind.meeting`) interoperability | `app/enums.py` |
+| 10 | 2026-10-30 | Unit 3 | Set `Response` as route return type for union responses | FastAPI inspects `HTMLResponse | Response` as OpenAPI model and errors out | `app/routers/web_meetings.py` |
+| 11 | 2026-10-30 | Unit 3 | Autouse `clean_db` fixture in `conftest.py` with isolated temp SQLite DB | Ensures 100% test isolation and idempotency across repeated test runs | `tests/conftest.py` |
 
 ---
 
@@ -209,21 +196,26 @@ uvicorn app.main:app --reload
 
 ## 7. NEXT PASS CONSIDERATIONS  *(rewrite in place every pass — the most important section for the next agent)*
 
-- **Next unit:** Unit 3 — Core domain: people, meetings & handovers (`TASKS.md` U3-T1 to U3-T7).
-- **Files to create/modify in Unit 3:**
-  - `app/models/person.py`, `app/models/meeting.py`, `app/models/decision.py` (SQLAlchemy 2.x mapped columns, relationships)
-  - `app/schemas/person.py`, `app/schemas/meeting.py`, `app/schemas/decision.py` (Pydantic validation schemas)
-  - `app/services/people_service.py`, `app/services/meeting_service.py` (business logic, status transitions, handover rules)
-  - `app/routers/web_people.py`, `app/routers/web_meetings.py` (FastAPI router endpoints)
-  - `app/templates/people/`, `app/templates/meetings/` (Jinja2 templates matching design.md)
-  - `tests/test_unit3_core_domain.py` (lifecycle, handover validation, attendance, notes caps)
-- **Checklist before running Unit 3:** Confirm CI/CD pipeline ran green on the Unit 2 commit and Render deployment succeeds.
+- **Next unit:** Unit 4 — Action items, history, carry-forward (`TASKS.md` U4-T1 to U4-T8).
+- **Files to create/modify in Unit 4:**
+  - `app/models/action_item.py` (expand with full fields, computed properties, relationships to Person and Meeting)
+  - `app/schemas/action_item.py` (schemas for creation, edit, status transition, close with outcome, reassign)
+  - `app/services/action_item_service.py` (item lifecycle, outcomes, blocked reasons, event audit logging)
+  - `app/services/carry_forward_service.py` (carry forward open items across meetings, carried count increment)
+  - `app/services/meeting_service.py` (wire complete bulk reassignment of handover items)
+  - `app/routers/web_items.py` (global `/items` list, filter by status/priority/owner, item detail page with side card)
+  - `app/templates/items/` (item lists, item detail, close-with-outcome modal, timeline partial)
+  - `app/templates/meetings/partials/items_tab.html` (wire real item table and inline creation)
+  - `app/templates/meetings/partials/history_tab.html` (wire timeline events)
+  - `tests/test_unit4_action_items.py` (close requires outcome, blocked requires reason, carry forward semantics)
+- **Checklist before running Unit 4:** Ensure `ruff format --check .`, `ruff check .`, and `pytest` are all passing.
 
 ---
 
 ## 8. KNOWN ISSUES / TECH DEBT  *(rewrite in place)*
 
 - `[Sev: low]` `fastapi.testclient` deprecation warning regarding httpx vs httpx2 in pytest output (`StarletteDeprecationWarning: Using httpx with starlette.testclient is deprecated`). Benign; will be resolved when FastAPI updates internal testclient adapter.
+
 
 ---
 
@@ -343,3 +335,57 @@ uvicorn app.main:app --reload
 **Next pass should:**
 1. Verify pipeline ran green on GitHub Actions after push.
 2. Build Unit 3: Core domain (people, meetings & handovers).
+
+---
+
+### Pass 3 — Unit 3: Core domain: people, meetings & handovers
+- **Date/time (UTC):** 2026-10-30T08:10:00Z
+- **Agent/tool:** Antigravity — Gemini 3.8 Flash
+- **Goal of this pass:** Build Person, Meeting, Participant, Decision models, Pydantic schemas, domain services with lifecycle state machine and event logging, HTMX-powered web views, viewing-as cookie switcher, and comprehensive tests.
+- **Status:** complete
+
+**Done (verified):**
+- U3-T1: Models created: `Person` (`name`, `email`, `role_title`, `is_active`, `is_on_leave`, `initials`), `Meeting` (`kind`, `status`, `title`, `scheduled_at`, `agenda`, `raw_notes`, `summary_md`, `handover_from_id`, `handover_to_id`, `previous_meeting_id`, `carry_forward_open_items`), `MeetingParticipant` (`attendance`, uniqueness constraint on `(meeting_id, person_id)`), `Decision` (`meeting_id`, `text`). Foreign keys stubbed for `ActionItem` and `ActionItemEvent`.
+- U3-T2: Pydantic schemas in `app/schemas/person.py`, `app/schemas/meeting.py`, `app/schemas/decision.py` enforcing character limits, email format, and handover constraints (`from != to`).
+- U3-T3: `people_service` and `meeting_service` implemented with full lifecycle transitions (`planned -> held -> closed`, `planned -> cancelled`), note saving capped at 50,000 chars, attendance toggling, decisions CRUD, and handover reassign stub. Structured events emitted (`meeting.created`, `meeting.status_changed`, `meeting.notes_saved`, `meeting.participant_added`, `meeting.attendance_updated`, `decision.created`, `decision.deleted`).
+- U3-T4: Web routers and Jinja2 templates: `/people` directory and inline creator, `/meetings` list with filter pills, `/meetings/new` form with handover controls, `/meetings/{id}` detail with tabs (Overview, Notes & Recap, Items, Brief, Knowledge, History), inline attendance updates via HTMX, and decisions add/delete.
+- U3-T5: "Viewing as" selector wired via cookie `loopclose_view_as` across all pages with user badge indication.
+- U3-T6: Inline form validation errors (HTTP 422 re-renders), 404 error handling for unknown IDs, read-only controls for closed/cancelled meetings.
+- U3-T7: 15 unit and integration tests written in `tests/test_unit3_core_domain.py`, covering person creation, duplicate email rejection, meeting/handover creation, invalid transitions, attendance updates, decision CRUD, notes length cap, and web endpoints.
+- Checked off completed tasks in `TASKS.md`.
+
+**Done but NOT VERIFIED:**
+- None. All 32 tests run and pass.
+
+**Not done / deferred:**
+- Action items, history audit timeline, and carry-forward service (belong to Unit 4).
+- AI recap and knowledge base linking (belong to Units 5 and 6).
+
+**Files created or modified:**
+- `app/models/person.py`, `meeting.py`, `decision.py`, `action_item.py`, `__init__.py`
+- `app/schemas/person.py`, `meeting.py`, `decision.py`, `__init__.py`
+- `app/services/people_service.py`, `meeting_service.py`, `__init__.py`
+- `app/routers/web_people.py`, `web_meetings.py`, `web_dashboard.py`
+- `app/templates/base.html`, `templates/people/index.html`, `templates/meetings/list.html`, `templates/meetings/form.html`, `templates/meetings/detail.html`
+- `app/templates/meetings/partials/` (`overview_tab.html`, `notes_tab.html`, `items_tab.html`, `brief_tab.html`, `knowledge_tab.html`, `history_tab.html`, `decisions_list.html`, `participants_card.html`)
+- `tests/conftest.py`
+- `tests/test_unit3_core_domain.py`
+- `TASKS.md`
+- `memory.md`
+
+**Commands run to verify:**
+- `.venv\Scripts\ruff check .` (All checks passed)
+- `.venv\Scripts\ruff format --check .` (All checks passed)
+- `.venv\Scripts\pytest -q` (32 passed in 0.62s)
+
+**Pipeline result after push:**
+- Ready for push to GitHub `main`.
+
+**Gotchas / lessons for the next agent:**
+- In FastAPI, return type annotations on route handlers should be `-> Response` rather than union types like `-> HTMLResponse | Response` to avoid Pydantic OpenAPI schema generation errors.
+- SQLite foreign key constraints and uniqueness across test runs are preserved reliably using the autouse `clean_db` fixture in `conftest.py`.
+
+**Next pass should:**
+1. Follow `AGENTS.md` ritual and read `memory.md`.
+2. Build Unit 4: Action items, history, carry-forward (`TASKS.md` U4-T1 to U4-T8).
+

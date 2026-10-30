@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}People — LoopClose{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Team Members</h1>
+    <p class="text-muted">Manage active participants, meeting owners, and handover partners.</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-3 gap-6" style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start;">
+  <!-- Left: People Table -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">People ({{ people|length }})</h2>
+    </div>
+    <div class="table-container">
+      <table class="table" style="width: 100%;">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Email</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in people %}
+          <tr {% if not p.is_active %}style="opacity: 0.6;"{% endif %}>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="avatar avatar-sm" style="background-color: var(--primary-soft); color: var(--primary);">{{ p.initials }}</span>
+                <strong>{{ p.name }}</strong>
+              </div>
+            </td>
+            <td class="text-muted">{{ p.role_title or "—" }}</td>
+            <td class="text-muted">{{ p.email or "—" }}</td>
+            <td>
+              {% if p.is_active %}
+                <span class="badge badge-success">Active</span>
+              {% else %}
+                <span class="badge badge-neutral">On leave</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="4" class="text-muted text-center py-6">No team members added yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Right: Add Person Form Card -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Add Person</h2>
+    </div>
+
+    {% if error %}
+    <div class="banner banner-danger mb-4" role="alert" style="margin-bottom: 16px;">
+      <svg width="16" height="16" aria-hidden="true"><use href="#icon-alert-triangle"/></svg>
+      <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <form method="post" action="/people">
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label for="name" class="label">Name</label>
+        <input type="text" id="name" name="name" class="input" required
+               value="{{ form_data.name if form_data else '' }}" placeholder="e.g. Priya Sharma">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label for="role_title" class="label">Role / Title <span class="text-muted" style="font-weight: normal;">(optional)</span></label>
+        <input type="text" id="role_title" name="role_title" class="input"
+               value="{{ form_data.role_title if form_data else '' }}" placeholder="e.g. Lead Engineer">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label for="email" class="label">Email <span class="text-muted" style="font-weight: normal;">(optional)</span></label>
+        <input type="email" id="email" name="email" class="input"
+               value="{{ form_data.email if form_data else '' }}" placeholder="priya@example.com">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox" name="is_active" value="true" {% if not form_data or form_data.is_active %}checked{% endif %}>
+          <span>Active member</span>
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%;">Add Person</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

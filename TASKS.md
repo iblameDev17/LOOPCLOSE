@@ -82,13 +82,13 @@ Tasks:
 **Depends on:** Unit 1 · **Read:** `PRD.md` §5.1–5.2, §8; `ARCHITECTURE.md` §7–9; `design.md` §5.2–5.4, §5.9.
 
 Tasks:
-- [ ] **U3-T1** Models: `Person`, `Meeting`, `MeetingParticipant`, `Decision` (per §7), with relationships and indexes.
-- [ ] **U3-T2** Schemas (Pydantic) with validation rules from `PRD.md` §8.
-- [ ] **U3-T3** `people_service`, `meeting_service` (create incl. handover rules, update, list/filter, participants & attendance, status transitions per §8.1, notes save, decisions add/delete, handover reassign **stub** that Unit 4 completes). Emit `meeting.*` events.
-- [ ] **U3-T4** Web routers + templates: people (list/create), meetings list (filters, open-item count placeholder), new meeting form (incl. handover fields), meeting detail with tabs (Overview, Notes & Recap [notes only], Items [placeholder], Brief [placeholder], Knowledge [placeholder], History [placeholder]), status change control, decisions add/delete, attendance updates.
-- [ ] **U3-T5** "Viewing as" selector (cookie) wired into base template.
-- [ ] **U3-T6** Inline validation errors on forms (HTMX 422 re-render); 404 handling for unknown IDs; read-only behaviour for closed/cancelled.
-- [ ] **U3-T7** Tests: lifecycle valid/invalid transitions, handover validation (from≠to), participant uniqueness, notes length cap, form validation errors.
+- [x] **U3-T1** Models: `Person`, `Meeting`, `MeetingParticipant`, `Decision` (per §7), with relationships and indexes.
+- [x] **U3-T2** Schemas (Pydantic) with validation rules from `PRD.md` §8.
+- [x] **U3-T3** `people_service`, `meeting_service` (create incl. handover rules, update, list/filter, participants & attendance, status transitions per §8.1, notes save, decisions add/delete, handover reassign **stub** that Unit 4 completes). Emit `meeting.*` events.
+- [x] **U3-T4** Web routers + templates: people (list/create), meetings list (filters, open-item count placeholder), new meeting form (incl. handover fields), meeting detail with tabs (Overview, Notes & Recap [notes only], Items [placeholder], Brief [placeholder], Knowledge [placeholder], History [placeholder]), status change control, decisions add/delete, attendance updates.
+- [x] **U3-T5** "Viewing as" selector (cookie) wired into base template.
+- [x] **U3-T6** Inline validation errors on forms (HTMX 422 re-render); 404 handling for unknown IDs; read-only behaviour for closed/cancelled.
+- [x] **U3-T7** Tests: lifecycle valid/invalid transitions, handover validation (from≠to), participant uniqueness, notes length cap, form validation errors.
 
 **Acceptance:** can create a meeting and a handover, add participants with attendance, move `planned → held → closed`, add/delete decisions, save notes; invalid actions show friendly inline errors; logs show `meeting.created`, `meeting.status_changed`, etc. with request IDs.
 

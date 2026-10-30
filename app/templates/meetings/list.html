@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Meetings & Handovers — LoopClose{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+  <div>
+    <h1 class="page-title">Meetings & Handovers</h1>
+    <p class="text-muted">Track agendas, decisions, participants, and handover ownership.</p>
+  </div>
+  <div>
+    <a href="/meetings/new" class="btn btn-primary">
+      <svg width="16" height="16" aria-hidden="true"><use href="#icon-plus"/></svg>
+      <span>New Meeting</span>
+    </a>
+  </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="card mb-6" style="margin-bottom: 24px; padding: 12px 16px;">
+  <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span class="text-muted small">Kind:</span>
+      <div class="segmented-control">
+        <a href="/meetings?{% if current_status %}status={{ current_status }}&{% endif %}"
+           class="btn btn-sm {% if not current_kind %}btn-secondary{% else %}btn-ghost{% endif %}">All</a>
+        <a href="/meetings?kind=meeting{% if current_status %}&status={{ current_status }}{% endif %}"
+           class="btn btn-sm {% if current_kind == 'meeting' %}btn-secondary{% else %}btn-ghost{% endif %}">Meetings</a>
+        <a href="/meetings?kind=handover{% if current_status %}&status={{ current_status }}{% endif %}"
+           class="btn btn-sm {% if current_kind == 'handover' %}btn-secondary{% else %}btn-ghost{% endif %}">Handovers</a>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span class="text-muted small">Status:</span>
+      <div class="segmented-control">
+        <a href="/meetings?{% if current_kind %}kind={{ current_kind }}&{% endif %}"
+           class="btn btn-sm {% if not current_status %}btn-secondary{% else %}btn-ghost{% endif %}">All</a>
+        <a href="/meetings?status=planned{% if current_kind %}&kind={{ current_kind }}{% endif %}"
+           class="btn btn-sm {% if current_status == 'planned' %}btn-secondary{% else %}btn-ghost{% endif %}">Planned</a>
+        <a href="/meetings?status=held{% if current_kind %}&kind={{ current_kind }}{% endif %}"
+           class="btn btn-sm {% if current_status == 'held' %}btn-secondary{% else %}btn-ghost{% endif %}">Held</a>
+        <a href="/meetings?status=closed{% if current_kind %}&kind={{ current_kind }}{% endif %}"
+           class="btn btn-sm {% if current_status == 'closed' %}btn-secondary{% else %}btn-ghost{% endif %}">Closed</a>
+        <a href="/meetings?status=cancelled{% if current_kind %}&kind={{ current_kind }}{% endif %}"
+           class="btn btn-sm {% if current_status == 'cancelled' %}btn-secondary{% else %}btn-ghost{% endif %}">Cancelled</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Meetings Table -->
+<div class="card">
+  <div class="table-container">
+    <table class="table" style="width: 100%;">
+      <thead>
+        <tr>
+          <th>Title & Kind</th>
+          <th>Scheduled Date</th>
+          <th>Status</th>
+          <th>Participants</th>
+          <th>Open Items</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in meetings %}
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              {% if m.is_handover %}
+                <span class="badge badge-primary" title="Handover">
+                  <svg width="12" height="12" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
+                  Handover
+                </span>
+              {% endif %}
+              <a href="/meetings/{{ m.id }}" style="font-weight: 600; text-decoration: none; color: var(--text-high);">
+                {{ m.title }}
+              </a>
+            </div>
+            {% if m.is_handover and m.handover_from and m.handover_to %}
+            <div class="text-muted small" style="margin-top: 4px;">
+              {{ m.handover_from.name }} &rarr; {{ m.handover_to.name }}
+            </div>
+            {% endif %}
+          </td>
+          <td class="text-muted">
+            {{ m.scheduled_at.strftime("%a %d %b %Y, %H:%M") if m.scheduled_at else "—" }}
+          </td>
+          <td>
+            {% if m.status == "planned" %}
+              <span class="badge badge-info">Planned</span>
+            {% elif m.status == "held" %}
+              <span class="badge badge-primary">Held</span>
+            {% elif m.status == "closed" %}
+              <span class="badge badge-success">Closed</span>
+            {% elif m.status == "cancelled" %}
+              <span class="badge badge-neutral" style="text-decoration: line-through;">Cancelled</span>
+            {% endif %}
+          </td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              {% for part in m.participants[:4] %}
+                <span class="avatar avatar-xs" title="{{ part.person.name }}"
+                      style="background-color: var(--primary-soft); color: var(--primary);">
+                  {{ part.person.initials }}
+                </span>
+              {% endfor %}
+              {% if m.participants|length > 4 %}
+                <span class="text-muted small">+{{ m.participants|length - 4 }}</span>
+              {% endif %}
+              {% if not m.participants %}
+                <span class="text-muted small">—</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <span class="text-muted">{{ m.current_items|length }}</span>
+          </td>
+          <td style="text-align: right;">
+            <a href="/meetings/{{ m.id }}" class="btn btn-sm btn-secondary">View</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-center py-8">
+            <div style="padding: 32px 0;">
+              <svg width="40" height="40" class="text-muted" aria-hidden="true" style="margin-bottom: 12px;"><use href="#icon-calendar"/></svg>
+              <div style="font-weight: 600; margin-bottom: 4px;">No meetings found</div>
+              <p class="text-muted small" style="margin-bottom: 16px;">Create your first meeting or adjust filters to view items.</p>
+              <a href="/meetings/new" class="btn btn-primary btn-sm">Create Meeting</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

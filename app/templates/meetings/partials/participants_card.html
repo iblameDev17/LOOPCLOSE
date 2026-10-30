@@ -1,0 +1,73 @@
+<div id="participants-section" class="card" style="margin-top: 20px;">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h2 class="card-title">Participants & Attendance ({{ meeting.participants|length }})</h2>
+  </div>
+
+  <div style="padding: 16px 20px;">
+    {% if not meeting.is_closed %}
+    <!-- Add Participant Form -->
+    <form hx-post="/meetings/{{ meeting.id }}/participants"
+          hx-target="#participants-section"
+          hx-swap="outerHTML"
+          style="display: flex; gap: 10px; margin-bottom: 16px;">
+      <select name="person_id" class="input" style="flex: 1;" required>
+        <option value="">Add a team member…</option>
+        {% for p in all_people %}
+          {% if p.id not in existing_participant_ids %}
+            <option value="{{ p.id }}">{{ p.name }} ({{ p.role_title or "Member" }})</option>
+          {% endif %}
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-secondary btn-sm">Add</button>
+    </form>
+    {% endif %}
+
+    <div class="table-container">
+      <table class="table" style="width: 100%;">
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Role</th>
+            <th style="width: 160px;">Attendance</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for part in meeting.participants %}
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="avatar avatar-xs" style="background-color: var(--primary-soft); color: var(--primary);">
+                  {{ part.person.initials }}
+                </span>
+                <span>{{ part.person.name }}</span>
+              </div>
+            </td>
+            <td class="text-muted small">{{ part.person.role_title or "—" }}</td>
+            <td>
+              {% if meeting.is_closed %}
+                <span class="badge {% if part.attendance == 'attended' %}badge-success{% elif part.attendance == 'absent' %}badge-danger{% elif part.attendance == 'no_response' %}badge-warning{% else %}badge-neutral{% endif %}">
+                  {{ part.attendance|replace('_', ' ')|capitalize }}
+                </span>
+              {% else %}
+                <form hx-post="/meetings/{{ meeting.id }}/participants/attendance"
+                      hx-target="#participants-section"
+                      hx-swap="outerHTML">
+                  <input type="hidden" name="person_id" value="{{ part.person_id }}">
+                  <select name="attendance" class="input input-sm" onchange="this.form.requestSubmit()"
+                          style="font-size: 13px; height: 32px; padding: 0 8px;">
+                    <option value="invited" {% if part.attendance == 'invited' %}selected{% endif %}>Invited</option>
+                    <option value="attended" {% if part.attendance == 'attended' %}selected{% endif %}>Attended</option>
+                    <option value="absent" {% if part.attendance == 'absent' %}selected{% endif %}>Absent</option>
+                    <option value="no_response" {% if part.attendance == 'no_response' %}selected{% endif %}>No response</option>
+                    <option value="declined" {% if part.attendance == 'declined' %}selected{% endif %}>Declined</option>
+                  </select>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

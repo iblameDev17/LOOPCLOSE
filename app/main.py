@@ -36,7 +36,7 @@ from app.errors import (
 )
 from app.logging_config import configure_logging, log_event
 from app.middleware import RequestContextMiddleware
-from app.routers import health, web_dashboard
+from app.routers import health, web_dashboard, web_meetings, web_people
 
 # Configure logging as the very first thing (before any other imports log).
 configure_logging()
@@ -87,7 +87,9 @@ def create_app() -> FastAPI:
     # ── Routers ───────────────────────────────────────────────────────────
     app.include_router(health.router)
     app.include_router(web_dashboard.router)
-    # Additional routers added in later units (meetings, items, kb, nudges …)
+    app.include_router(web_people.router)
+    app.include_router(web_meetings.router)
+    # Additional routers added in later units (items, kb, nudges …)
 
     # ── Error handlers ────────────────────────────────────────────────────
     app.add_exception_handler(NotFoundError, handle_not_found)  # type: ignore[arg-type]

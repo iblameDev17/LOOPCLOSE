@@ -137,6 +137,8 @@
         <li><a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">Dashboard</a></li>
         <li><a href="/meetings" class="nav-link {% if request.url.path.startswith('/meetings') %}active{% endif %}">
           <svg width="16" height="16" aria-hidden="true"><use href="#icon-calendar"/></svg> Meetings</a></li>
+        <li><a href="/people" class="nav-link {% if request.url.path.startswith('/people') %}active{% endif %}">
+          <svg width="16" height="16" aria-hidden="true"><use href="#icon-users"/></svg> People</a></li>
         <li><a href="/items" class="nav-link {% if request.url.path.startswith('/items') %}active{% endif %}">
           <svg width="16" height="16" aria-hidden="true"><use href="#icon-check-circle"/></svg> Items</a></li>
         <li><a href="/kb" class="nav-link {% if request.url.path.startswith('/kb') %}active{% endif %}">

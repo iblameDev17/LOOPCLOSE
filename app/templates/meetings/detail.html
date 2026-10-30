@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}{{ meeting.title }} — LoopClose{% endblock %}
+
+{% block content %}
+<div class="meeting-detail-header mb-6" style="margin-bottom: 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;">
+        <h1 class="page-title" style="margin: 0;">{{ meeting.title }}</h1>
+        {% if meeting.is_handover %}
+          <span class="badge badge-primary">
+            <svg width="12" height="12" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
+            Handover
+          </span>
+        {% endif %}
+        <span class="badge {% if meeting.status == 'planned' %}badge-info{% elif meeting.status == 'held' %}badge-primary{% elif meeting.status == 'closed' %}badge-success{% elif meeting.status == 'cancelled' %}badge-neutral{% endif %}"
+              style="{% if meeting.status == 'cancelled' %}text-decoration: line-through;{% endif %}">
+          {{ meeting.status|capitalize }}
+        </span>
+      </div>
+
+      <div class="text-muted small" style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+        <span>
+          <svg width="14" height="14" aria-hidden="true" style="vertical-align: -2px;"><use href="#icon-calendar"/></svg>
+          {{ meeting.scheduled_at.strftime("%a %d %b %Y, %H:%M") }}
+        </span>
+        <span>
+          <svg width="14" height="14" aria-hidden="true" style="vertical-align: -2px;"><use href="#icon-users"/></svg>
+          {{ meeting.participants|length }} participants
+        </span>
+        <span>
+          <svg width="14" height="14" aria-hidden="true" style="vertical-align: -2px;"><use href="#icon-check-circle"/></svg>
+          {{ meeting.current_items|length }} open items
+        </span>
+      </div>
+    </div>
+
+    <!-- Status Change Controls -->
+    {% if not meeting.is_closed %}
+    <div style="display: flex; gap: 10px;">
+      {% if meeting.status == 'planned' %}
+      <form method="post" action="/meetings/{{ meeting.id }}/status">
+        <input type="hidden" name="status" value="held">
+        <button type="submit" class="btn btn-secondary btn-sm">Mark as Held</button>
+      </form>
+      {% elif meeting.status == 'held' %}
+      <form method="post" action="/meetings/{{ meeting.id }}/status"
+            onsubmit="return confirm('Close this meeting? Any remaining open items can be carried forward to the next meeting.')">
+        <input type="hidden" name="status" value="closed">
+        <button type="submit" class="btn btn-primary btn-sm">Close Meeting</button>
+      </form>
+      {% endif %}
+
+      <form method="post" action="/meetings/{{ meeting.id }}/status"
+            onsubmit="return confirm('Cancel this meeting?')">
+        <input type="hidden" name="status" value="cancelled">
+        <button type="submit" class="btn btn-ghost btn-sm text-danger">Cancel</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Tabs Navigation -->
+<div class="tabs-nav" style="border-bottom: 1px solid var(--border); margin-bottom: 24px; display: flex; gap: 8px; overflow-x: auto;">
+  <a href="/meetings/{{ meeting.id }}?tab=overview"
+     class="tab-link {% if active_tab == 'overview' %}active{% endif %}"
+     style="padding: 10px 16px; text-decoration: none; font-weight: 500; color: var(--text-high); {% if active_tab == 'overview' %}border-bottom: 2px solid var(--primary); color: var(--primary);{% endif %}">
+    Overview
+  </a>
+  <a href="/meetings/{{ meeting.id }}?tab=notes"
+     class="tab-link {% if active_tab == 'notes' %}active{% endif %}"
+     style="padding: 10px 16px; text-decoration: none; font-weight: 500; color: var(--text-high); {% if active_tab == 'notes' %}border-bottom: 2px solid var(--primary); color: var(--primary);{% endif %}">
+    Notes & Recap
+  </a>
+  <a href="/meetings/{{ meeting.id }}?tab=items"
+     class="tab-link {% if active_tab == 'items' %}active{% endif %}"
+     style="padding: 10px 16px; text-decoration: none; font-weight: 500; color: var(--text-high); {% if active_tab == 'items' %}border-bottom: 2px solid var(--primary); color: var(--primary);{% endif %}">
+    Items ({{ meeting.current_items|length }})
+  </a>
+  <a href="/meetings/{{ meeting.id }}?tab=brief"
+     class="tab-link {% if active_tab == 'brief' %}active{% endif %}"
+     style="padding: 10px 16px; text-decoration: none; font-weight: 500; color: var(--text-high); {% if active_tab == 'brief' %}border-bottom: 2px solid var(--primary); color: var(--primary);{% endif %}">
+    Brief
+  </a>
+  <a href="/meetings/{{ meeting.id }}?tab=knowledge"
+     class="tab-link {% if active_tab == 'knowledge' %}active{% endif %}"
+     style="padding: 10px 16px; text-decoration: none; font-weight: 500; color: var(--text-high); {% if active_tab == 'knowledge' %}border-bottom: 2px solid var(--primary); color: var(--primary);{% endif %}">
+    Knowledge
+  </a>
+  <a href="/meetings/{{ meeting.id }}?tab=history"
+     class="tab-link {% if active_tab == 'history' %}active{% endif %}"
+     style="padding: 10px 16px; text-decoration: none; font-weight: 500; color: var(--text-high); {% if active_tab == 'history' %}border-bottom: 2px solid var(--primary); color: var(--primary);{% endif %}">
+    History
+  </a>
+</div>
+
+<!-- Tab Content Container -->
+<div id="tab-panel">
+  {% if active_tab == 'notes' %}
+    {% include "meetings/partials/notes_tab.html" %}
+  {% elif active_tab == 'items' %}
+    {% include "meetings/partials/items_tab.html" %}
+  {% elif active_tab == 'brief' %}
+    {% include "meetings/partials/brief_tab.html" %}
+  {% elif active_tab == 'knowledge' %}
+    {% include "meetings/partials/knowledge_tab.html" %}
+  {% elif active_tab == 'history' %}
+    {% include "meetings/partials/history_tab.html" %}
+  {% else %}
+    {% include "meetings/partials/overview_tab.html" %}
+  {% endif %}
+</div>
+{% endblock %}

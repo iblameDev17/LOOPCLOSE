@@ -1,5 +1,4 @@
-"""
-All enumerations for the LoopClose domain.
+"""All enumerations for the LoopClose domain.
 
 Keeping every enum in one file avoids circular imports and makes it easy to
 find all possible values when reading or writing code or migration scripts.
@@ -19,6 +18,10 @@ class MeetingKind(StrEnum):
     meeting = "meeting"
     handover = "handover"
 
+    # Aliases
+    MEETING = "meeting"
+    HANDOVER = "handover"
+
 
 class MeetingStatus(StrEnum):
     """Lifecycle states of a meeting or handover.
@@ -30,6 +33,12 @@ class MeetingStatus(StrEnum):
     closed = "closed"
     cancelled = "cancelled"
 
+    # Aliases
+    PLANNED = "planned"
+    HELD = "held"
+    CLOSED = "closed"
+    CANCELLED = "cancelled"
+
 
 class Attendance(StrEnum):
     """Per-participant attendance status."""
@@ -39,6 +48,13 @@ class Attendance(StrEnum):
     absent = "absent"
     no_response = "no_response"
     declined = "declined"
+
+    # Aliases
+    INVITED = "invited"
+    ATTENDED = "attended"
+    ABSENT = "absent"
+    NO_RESPONSE = "no_response"
+    DECLINED = "declined"
 
 
 # ── Action items ──────────────────────────────────────────────────────────────
@@ -55,11 +71,23 @@ class ActionStatus(StrEnum):
     done = "done"
     dropped = "dropped"
 
+    # Aliases
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    BLOCKED = "blocked"
+    DONE = "done"
+    DROPPED = "dropped"
+
 
 class Priority(StrEnum):
     low = "low"
     medium = "medium"
     high = "high"
+
+    # Aliases
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
 
 
 class OutcomeType(StrEnum):
@@ -69,6 +97,12 @@ class OutcomeType(StrEnum):
     partially_completed = "partially_completed"
     dropped = "dropped"
     superseded = "superseded"
+
+    # Aliases
+    COMPLETED = "completed"
+    PARTIALLY_COMPLETED = "partially_completed"
+    DROPPED = "dropped"
+    SUPERSEDED = "superseded"
 
 
 class EventType(StrEnum):
@@ -87,6 +121,20 @@ class EventType(StrEnum):
     kb_linked = "kb_linked"
     nudged = "nudged"
 
+    # Aliases
+    CREATED = "created"
+    UPDATED = "updated"
+    REASSIGNED = "reassigned"
+    STATUS_CHANGED = "status_changed"
+    DUE_DATE_CHANGED = "due_date_changed"
+    CARRIED_FORWARD = "carried_forward"
+    BLOCKED = "blocked"
+    CLOSED = "closed"
+    REOPENED = "reopened"
+    OUTCOME_RECORDED = "outcome_recorded"
+    KB_LINKED = "kb_linked"
+    NUDGED = "nudged"
+
 
 class ItemSource(StrEnum):
     """How an action item or decision was created."""
@@ -94,6 +142,11 @@ class ItemSource(StrEnum):
     manual = "manual"
     ai = "ai"
     heuristic = "heuristic"
+
+    # Aliases
+    MANUAL = "manual"
+    AI = "ai"
+    HEURISTIC = "heuristic"
 
 
 # ── AI / status ───────────────────────────────────────────────────────────────
@@ -107,10 +160,20 @@ class AiStatus(StrEnum):
     fallback = "fallback"
     failed = "failed"
 
+    # Aliases
+    NONE = "none"
+    OK = "ok"
+    FALLBACK = "fallback"
+    FAILED = "failed"
+
 
 class GeneratedBy(StrEnum):
     ai = "ai"
     fallback = "fallback"
+
+    # Aliases
+    AI = "ai"
+    FALLBACK = "fallback"
 
 
 # ── Knowledge base ────────────────────────────────────────────────────────────
@@ -126,6 +189,14 @@ class KBSource(StrEnum):
     transcript = "transcript"
     meeting = "meeting"
 
+    # Aliases
+    NOTE = "note"
+    DOCUMENT = "document"
+    CHAT = "chat"
+    EMAIL = "email"
+    TRANSCRIPT = "transcript"
+    MEETING = "meeting"
+
 
 class IndexStatus(StrEnum):
     """Vector-indexing state of a KB document (Unit 9)."""
@@ -135,6 +206,12 @@ class IndexStatus(StrEnum):
     failed = "failed"
     not_applicable = "not_applicable"
 
+    # Aliases
+    PENDING = "pending"
+    INDEXED = "indexed"
+    FAILED = "failed"
+    NOT_APPLICABLE = "not_applicable"
+
 
 class EntityType(StrEnum):
     """The type of entity a KB link is attached to."""
@@ -142,6 +219,11 @@ class EntityType(StrEnum):
     action_item = "action_item"
     decision = "decision"
     meeting = "meeting"
+
+    # Aliases
+    ACTION_ITEM = "action_item"
+    DECISION = "decision"
+    MEETING = "meeting"
 
 
 class LinkMethod(StrEnum):
@@ -152,6 +234,12 @@ class LinkMethod(StrEnum):
     keyword = "keyword"
     manual = "manual"
 
+    # Aliases
+    LLM = "llm"
+    VECTOR = "vector"
+    KEYWORD = "keyword"
+    MANUAL = "manual"
+
 
 # ── Nudge Center ──────────────────────────────────────────────────────────────
 
@@ -159,3 +247,7 @@ class LinkMethod(StrEnum):
 class Tone(StrEnum):
     friendly = "friendly"
     firm = "firm"
+
+    # Aliases
+    FRIENDLY = "friendly"
+    FIRM = "firm"

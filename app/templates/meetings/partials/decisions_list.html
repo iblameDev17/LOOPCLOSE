@@ -1,0 +1,44 @@
+<div id="decisions-section" class="card" style="margin-top: 20px;">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h2 class="card-title">Decisions ({{ meeting.decisions|length }})</h2>
+  </div>
+
+  <div style="padding: 16px 20px;">
+    {% if not meeting.is_closed %}
+    <form hx-post="/meetings/{{ meeting.id }}/decisions"
+          hx-target="#decisions-section"
+          hx-swap="outerHTML"
+          style="display: flex; gap: 10px; margin-bottom: 20px;">
+      <input type="text" name="text" class="input" placeholder="Record a key decision agreed upon…" required minlength="3" maxlength="1000" style="flex: 1;">
+      <button type="submit" class="btn btn-secondary btn-sm">Add Decision</button>
+    </form>
+    {% endif %}
+
+    <ul class="decisions-list" style="list-style: none; padding: 0; margin: 0;">
+      {% for dec in meeting.decisions %}
+      <li style="display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border);">
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+          <span style="color: var(--success); font-weight: bold; margin-top: 2px;">&bull;</span>
+          <div>
+            <span>{{ dec.text }}</span>
+            {% if dec.source == "ai" %}
+              <span class="badge badge-ai" style="margin-left: 6px;">✦ AI</span>
+            {% endif %}
+          </div>
+        </div>
+        {% if not meeting.is_closed %}
+        <form hx-post="/decisions/{{ dec.id }}/delete"
+              hx-target="#decisions-section"
+              hx-swap="outerHTML">
+          <button type="submit" class="btn btn-ghost btn-sm text-danger" title="Delete decision">
+            <svg width="14" height="14" aria-hidden="true"><use href="#icon-x"/></svg>
+          </button>
+        </form>
+        {% endif %}
+      </li>
+      {% else %}
+      <li class="text-muted small py-4 text-center">No decisions recorded yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>

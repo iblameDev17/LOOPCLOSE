@@ -1,0 +1,50 @@
+<div id="overview-tab-content">
+  <!-- Handover Info Card (if kind is handover) -->
+  {% if meeting.is_handover and meeting.handover_from and meeting.handover_to %}
+  <div class="card mb-6" style="background: var(--surface-2); border-left: 4px solid var(--primary); margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <div class="badge badge-primary mb-2" style="margin-bottom: 6px;">Handover Scope</div>
+        <div style="font-size: 16px; font-weight: 600;">
+          {{ meeting.handover_from.name }} &rarr; {{ meeting.handover_to.name }}
+        </div>
+        <p class="text-muted small" style="margin: 4px 0 0 0;">
+          All open action items belonging to {{ meeting.handover_from.name }} can be reassigned to {{ meeting.handover_to.name }} with one click.
+        </p>
+      </div>
+      {% if not meeting.is_closed %}
+      <div>
+        <form hx-post="/meetings/{{ meeting.id }}/handover/reassign"
+              hx-confirm="Reassign all of {{ meeting.handover_from.name }}'s open items to {{ meeting.handover_to.name }}?">
+          <button type="submit" class="btn btn-primary btn-sm">
+            Reassign All to {{ meeting.handover_to.name }}
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Agenda Card -->
+  <div class="card mb-6" style="margin-bottom: 20px;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <h2 class="card-title">Agenda & Scope</h2>
+    </div>
+    <div style="padding: 16px 20px;">
+      {% if meeting.agenda %}
+        <div style="white-space: pre-wrap; line-height: 1.6;">{{ meeting.agenda }}</div>
+      {% else %}
+        <p class="text-muted small" style="margin: 0;">No agenda provided for this meeting.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-6" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+    <!-- Participants Card -->
+    {% include "meetings/partials/participants_card.html" %}
+
+    <!-- Decisions Card -->
+    {% include "meetings/partials/decisions_list.html" %}
+  </div>
+</div>

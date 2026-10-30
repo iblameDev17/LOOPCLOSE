@@ -1,0 +1,44 @@
+<div id="notes-tab-content" class="card">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h2 class="card-title">Meeting Notes & Raw Transcript</h2>
+      <p class="text-muted small" style="margin: 4px 0 0 0;">Paste rough discussion notes, chat messages, or call transcripts below.</p>
+    </div>
+    {% if not meeting.is_closed %}
+    <div style="display: flex; gap: 10px;">
+      <button type="button" class="btn btn-secondary btn-sm"
+              onclick="document.getElementById('notes-form').requestSubmit()">
+        Save Notes
+      </button>
+      <button type="button" class="btn btn-ai btn-sm" disabled title="AI Recap is enabled in Unit 5">
+        <svg width="14" height="14" aria-hidden="true"><use href="#icon-sparkle"/></svg>
+        <span>Generate Recap</span>
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div style="padding: 20px;">
+    {% if meeting.is_closed %}
+      <div style="background: var(--surface-2); padding: 16px; border-radius: 6px; white-space: pre-wrap; line-height: 1.6; min-height: 200px;">
+        {{ meeting.raw_notes or "No notes were recorded for this meeting." }}
+      </div>
+    {% else %}
+      <form id="notes-form" hx-post="/meetings/{{ meeting.id }}/notes"
+            hx-target="#notes-tab-content"
+            hx-swap="outerHTML">
+        <div class="form-group">
+          <textarea name="raw_notes" class="textarea" rows="14" maxlength="50000"
+                    placeholder="Type or paste meeting notes, decisions discussed, action items, or chat logs here…"
+                    style="width: 100%; font-family: inherit; line-height: 1.6;">{{ meeting.raw_notes or '' }}</textarea>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+          <span class="text-muted small">
+            {{ meeting.raw_notes|length if meeting.raw_notes else 0 }} / 50,000 characters
+          </span>
+          <button type="submit" class="btn btn-primary btn-sm">Save Notes</button>
+        </div>
+      </form>
+    {% endif %}
+  </div>
+</div>
