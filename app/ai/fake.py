@@ -7,6 +7,7 @@ All tests MUST use this provider (AGENTS.md §6.8, §9).
 from __future__ import annotations
 
 import json
+import re
 
 _RECAP_RESPONSE = {
     "summary": "Team discussed project timeline and blockers. Key decisions were made about deployment.",
@@ -31,6 +32,11 @@ _BRIEF_RESPONSE = {
     "open_questions": ["What is the rollback plan?"],
     "related_knowledge": [],
     "suggested_first_steps": ["Review deployment scripts"],
+}
+
+_KB_SUMMARIZE_RESPONSE = {
+    "summary": "Overview of deployment architecture and system requirements.",
+    "tags": ["deployment", "architecture", "infra"],
 }
 
 
@@ -72,6 +78,22 @@ class FakeProvider:
             return json.dumps(_RECAP_RESPONSE)
         if "BriefResult" in schema_hint:
             return json.dumps(_BRIEF_RESPONSE)
+        if "KBSummarizeResult" in schema_hint:
+            return json.dumps(_KB_SUMMARIZE_RESPONSE)
+        if "LinkResult" in schema_hint:
+            # Extract document IDs from the prompt if present
+            doc_ids = [int(m) for m in re.findall(r'"id":\s*(\d+)', prompt)]
+            if not doc_ids:
+                doc_ids = [1]
+            matches = [
+                {
+                    "document_id": d_id,
+                    "relevance": 0.88,
+                    "reason": "Direct architectural and context match",
+                }
+                for d_id in doc_ids[:2]
+            ]
+            return json.dumps({"matches": matches})
 
         # Generic fallback
         return json.dumps({"summary": "AI generated content", "items": []})

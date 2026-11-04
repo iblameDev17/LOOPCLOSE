@@ -36,7 +36,7 @@ from app.errors import (
 )
 from app.logging_config import configure_logging, log_event
 from app.middleware import RequestContextMiddleware
-from app.routers import health, web_dashboard, web_items, web_meetings, web_people
+from app.routers import health, web_dashboard, web_items, web_kb, web_meetings, web_people
 
 # Configure logging as the very first thing (before any other imports log).
 configure_logging()
@@ -90,6 +90,7 @@ def create_app() -> FastAPI:
     app.include_router(web_people.router)
     app.include_router(web_meetings.router)
     app.include_router(web_items.router)
+    app.include_router(web_kb.router)
     # Additional routers added in later units (kb, nudges …)
 
     # ── Error handlers ────────────────────────────────────────────────────

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+  <div>
+    <h1 style="font-size: 26px; font-weight: 700; margin: 0 0 6px 0;">Team Knowledge Base</h1>
+    <p class="text-muted small" style="margin: 0;">Centralized repository of documents, past meeting memories, notes, and transcripts.</p>
+  </div>
+  <a href="/kb/new" class="btn btn-primary">
+    <svg width="14" height="14" aria-hidden="true"><use href="#icon-plus"/></svg>
+    <span>Add Document</span>
+  </a>
+</div>
+
+<!-- Search Bar -->
+<div class="card" style="margin-bottom: 24px; padding: 16px;">
+  <form method="get" action="/kb" style="display: flex; gap: 12px; align-items: center;">
+    <div style="flex: 1; position: relative;">
+      <input type="text" name="q" value="{{ query }}" class="input" placeholder="Search knowledge by title, content, or summary…" style="width: 100%;">
+    </div>
+    <button type="submit" class="btn btn-secondary">Search</button>
+    {% if query %}
+      <a href="/kb" class="btn btn-ghost btn-sm">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Documents Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+  {% if documents %}
+    <div class="table-container">
+      <table class="table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: var(--surface-2); text-align: left; border-bottom: 1px solid var(--border);">
+            <th style="padding: 12px 16px; font-size: 13px;">Title</th>
+            <th style="padding: 12px 16px; font-size: 13px;">Source</th>
+            <th style="padding: 12px 16px; font-size: 13px;">Summary</th>
+            <th style="padding: 12px 16px; font-size: 13px;">Tags</th>
+            <th style="padding: 12px 16px; font-size: 13px;">Last Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for doc in documents %}
+          <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s ease;">
+            <td style="padding: 14px 16px;">
+              <a href="/kb/{{ doc.id }}" style="font-weight: 600; color: var(--primary); font-size: 15px;">
+                {{ doc.title }}
+              </a>
+            </td>
+            <td style="padding: 14px 16px;">
+              <span class="badge" style="background: var(--surface-2); text-transform: uppercase; font-size: 11px;">
+                {{ doc.source_type }}
+              </span>
+            </td>
+            <td style="padding: 14px 16px; max-width: 380px;">
+              <p class="text-muted small" style="margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {{ doc.summary or (doc.content[:100] ~ '…') }}
+              </p>
+            </td>
+            <td style="padding: 14px 16px;">
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                {% for tag in doc.tags[:3] %}
+                  <span class="badge" style="background: var(--primary-soft); color: var(--primary); font-size: 11px;">#{{ tag }}</span>
+                {% endfor %}
+              </div>
+            </td>
+            <td style="padding: 14px 16px; font-size: 13px;" class="text-muted">
+              {{ doc.updated_at.strftime('%d %b %Y') }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="padding: 48px; text-align: center;">
+      <svg width="48" height="48" class="text-muted" aria-hidden="true" style="margin-bottom: 16px;"><use href="#icon-book"/></svg>
+      <h3 style="margin-bottom: 8px;">No documents found</h3>
+      <p class="text-muted small" style="margin-bottom: 16px;">
+        {% if query %}No documents matched "{{ query }}".{% else %}Start by adding notes, documentation, or transcripts to team memory.{% endif %}
+      </p>
+      <a href="/kb/new" class="btn btn-primary">Add First Document</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

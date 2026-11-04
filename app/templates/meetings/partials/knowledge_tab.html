@@ -1,10 +1,110 @@
 <div id="knowledge-tab-content" class="card">
-  <div class="card-header">
-    <h2 class="card-title">Linked Knowledge Base</h2>
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <h2 class="card-title">Linked Knowledge Base Documents</h2>
+      <p class="text-muted small" style="margin: 4px 0 0 0;">Related architectural specs, notes, and past meeting memories linked to this meeting.</p>
+    </div>
+    {% if not meeting.is_closed %}
+    <div style="display: flex; gap: 10px;">
+      <button type="button" class="btn btn-ai btn-sm"
+              hx-post="/meetings/{{ meeting.id }}/suggest-links"
+              hx-target="#suggested-links-container"
+              hx-indicator="#ai-kb-indicator">
+        <svg width="14" height="14" aria-hidden="true"><use href="#icon-sparkle"/></svg>
+        <span>Suggest Related Knowledge</span>
+      </button>
+    </div>
+    {% endif %}
   </div>
-  <div style="padding: 32px; text-align: center;">
-    <svg width="40" height="40" class="text-muted" aria-hidden="true" style="margin-bottom: 12px;"><use href="#icon-book"/></svg>
-    <div style="font-weight: 600; margin-bottom: 4px;">Knowledge Retrieval & Linking</div>
-    <p class="text-muted small" style="margin-bottom: 16px;">Semantic & keyword linking with team memory documents is scheduled for Unit 6.</p>
+
+  <!-- Loading Skeleton Indicator -->
+  <div id="ai-kb-indicator" class="htmx-indicator" style="padding: 16px 20px;">
+    <div class="skeleton-block" style="padding: 20px; border-radius: var(--radius-sm);">
+      <div class="skeleton-bar skeleton-bar-full"></div>
+      <div class="skeleton-bar skeleton-bar-med"></div>
+      <div class="skeleton-caption">AI is retrieving related documents from team memory…</div>
+    </div>
+  </div>
+
+  <div style="padding: 20px;">
+    <!-- Container for AI link suggestions -->
+    <div id="suggested-links-container"></div>
+
+    <!-- Currently Linked Documents List -->
+    {% if linked_docs %}
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+        {% for lk in linked_docs %}
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; background: var(--surface-2); padding: 14px 16px; border-radius: 6px; border: 1px solid var(--border);">
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <a href="/kb/{{ lk.document.id }}" target="_blank" style="font-weight: 600; font-size: 15px; color: var(--primary);">
+                  {{ lk.document.title }}
+                </a>
+                {% if lk.method == 'llm' %}
+                  <span class="badge" style="background: var(--ai-soft); color: var(--ai); border: 1px solid var(--ai-border);">AI match</span>
+                {% elif lk.method == 'vector' %}
+                  <span class="badge" style="background: var(--ai-soft); color: var(--ai); border: 1px solid var(--ai-border);">Semantic</span>
+                {% elif lk.method == 'keyword' %}
+                  <span class="badge" style="background: var(--neutral-soft); color: var(--neutral);">Keyword</span>
+                {% else %}
+                  <span class="badge" style="background: var(--surface); border: 1px solid var(--border);">Manual</span>
+                {% endif %}
+                <span class="badge" style="background: var(--surface); text-transform: uppercase; font-size: 11px;">{{ lk.document.source_type }}</span>
+              </div>
+              {% if lk.reason %}
+                <p class="text-muted small" style="margin: 0 0 6px 0;">{{ lk.reason }}</p>
+              {% endif %}
+              <p class="text-muted small" style="margin: 0; font-style: italic;">
+                {{ lk.document.summary or (lk.document.content[:140] ~ '…') }}
+              </p>
+            </div>
+
+            {% if not meeting.is_closed %}
+            <form method="post" action="/links/{{ lk.id }}/delete">
+              <input type="hidden" name="redirect_url" value="/meetings/{{ meeting.id }}?tab=knowledge">
+              <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--danger);" title="Remove link">
+                Remove
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="padding: 32px 16px; text-align: center; background: var(--surface-2); border-radius: 6px; margin-bottom: 24px;">
+        <p class="text-muted" style="margin: 0;">No knowledge base documents are linked to this meeting yet.</p>
+      </div>
+    {% endif %}
+
+    <!-- Manual Link Adder Form -->
+    {% if not meeting.is_closed and all_docs %}
+    <div style="border-top: 1px solid var(--border); padding-top: 20px;">
+      <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em;">Manually Link Document</h3>
+      <form method="post" action="/links" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+        <input type="hidden" name="entity_type" value="meeting">
+        <input type="hidden" name="entity_id" value="{{ meeting.id }}">
+        <input type="hidden" name="method" value="manual">
+
+        <div style="flex: 2; min-width: 220px;">
+          <label class="label" for="manual-doc-id">Choose Document</label>
+          <select id="manual-doc-id" name="document_id" class="select" style="width: 100%;" required>
+            <option value="">Select a document…</option>
+            {% for d in all_docs %}
+              <option value="{{ d.id }}">{{ d.title }} ({{ d.source_type }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="flex: 3; min-width: 240px;">
+          <label class="label" for="manual-doc-reason">Reason (optional)</label>
+          <input type="text" id="manual-doc-reason" name="reason" class="input" placeholder="e.g. Reference spec for sprint goals" style="width: 100%;">
+        </div>
+
+        <button type="submit" class="btn btn-secondary">
+          Add Link
+        </button>
+      </form>
+    </div>
+    {% endif %}
   </div>
 </div>

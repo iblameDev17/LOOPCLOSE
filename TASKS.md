@@ -140,14 +140,14 @@ Tasks:
 **Depends on:** Unit 5 · **Read:** `PRD.md` §5.6–5.7; `ARCHITECTURE.md` §10–11; `design.md` §5.4, §5.5, §5.7.
 
 Tasks:
-- [ ] **U6-T1** Models: `KBDocument`, `KBLink` (and `KBChunk` table definition for Unit 9, unused for now), `CatchupBrief`.
-- [ ] **U6-T2** `kb_service`: create doc (AI summary + tags via `kb_summarize`, fallback trimmed text), upload `.txt/.md` validation (≤1 MB, UTF-8), list/search, detail, "referenced by", reindex; **auto-index meetings** (type `meeting`) when a recap is applied or a meeting is closed; emit `kb.*` events.
-- [ ] **U6-T3** `app/kb/retrieval.py`: `KBMatch`, `find_related()`, `LLMSummaryRetriever` (catalogue ≤50 docs, validate IDs, relevance ≥0.5, max 3), `KeywordRetriever` fallback, fallback chain driven by `RETRIEVER` setting; `kb.retrieval` log with retriever, matches, latency.
-- [ ] **U6-T4** Link management: suggest-links endpoints for items/decisions/meetings (HTMX partial with accept/dismiss), manual add/remove, uniqueness; `kb_linked` item event on accept.
-- [ ] **U6-T5** UI: `/kb` list, `/kb/new` (paste or upload), `/kb/{id}` detail; Knowledge tab on meetings; Linked knowledge on item detail; method pills (`design.md` §4.4).
-- [ ] **U6-T6** `brief_service` + `app/ai/prompts/brief.py` (`brief.v1`): assemble structured context (meeting summary, decisions, the person's items, changes since — reassignments/carry-forwards/blocks, related KB with titles); generate; template fallback; persist `CatchupBrief`; default person logic (absent/no_response/handover `to`).
-- [ ] **U6-T7** Brief tab UI: person selector, **Generate brief**, brief card with sections and source links, Copy button, fallback banner + Retry.
-- [ ] **U6-T8** Tests: summary fallback; upload validation; `find_related` happy path (fake provider), invalid IDs discarded, fallback chain to keyword; uniqueness of links; brief fallback content; default brief person selection.
+- [x] **U6-T1** Models: `KBDocument`, `KBLink` (and `KBChunk` table definition for Unit 9, unused for now), `CatchupBrief`.
+- [x] **U6-T2** `kb_service`: create doc (AI summary + tags via `kb_summarize`, fallback trimmed text), upload `.txt/.md` validation (≤1 MB, UTF-8), list/search, detail, "referenced by", reindex; **auto-index meetings** (type `meeting`) when a recap is applied or a meeting is closed; emit `kb.*` events.
+- [x] **U6-T3** `app/kb/retrieval.py`: `KBMatch`, `find_related()`, `LLMSummaryRetriever` (catalogue ≤50 docs, validate IDs, relevance ≥0.5, max 3), `KeywordRetriever` fallback, fallback chain driven by `RETRIEVER` setting; `kb.retrieval` log with retriever, matches, latency.
+- [x] **U6-T4** Link management: suggest-links endpoints for items/decisions/meetings (HTMX partial with accept/dismiss), manual add/remove, uniqueness; `kb_linked` item event on accept.
+- [x] **U6-T5** UI: `/kb` list, `/kb/new` (paste or upload), `/kb/{id}` detail; Knowledge tab on meetings; Linked knowledge on item detail; method pills (`design.md` §4.4).
+- [x] **U6-T6** `brief_service` + `app/ai/prompts/brief.py` (`brief.v1`): assemble structured context (meeting summary, decisions, the person's items, changes since — reassignments/carry-forwards/blocks, related KB with titles); generate; template fallback; persist `CatchupBrief`; default person logic (absent/no_response/handover `to`).
+- [x] **U6-T7** Brief tab UI: person selector, **Generate brief**, brief card with sections and source links, Copy button, fallback banner + Retry.
+- [x] **U6-T8** Tests: summary fallback; upload validation; `find_related` happy path (fake provider), invalid IDs discarded, fallback chain to keyword; uniqueness of links; brief fallback content; default brief person selection.
 
 **Acceptance:** add a document and see an AI summary + tags; suggest related knowledge for an item and get ≤3 matches with reason/method that can be accepted; briefs for an absentee/handover successor are readable and cite related docs; failures degrade gracefully; logs show `kb.*` and `ai.*` events.
 

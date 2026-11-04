@@ -14,9 +14,17 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.enums import Attendance, MeetingKind
 from app.errors import ValidationFailed
+from app.kb import retrieval
 from app.models.decision import Decision
 from app.schemas.meeting import MeetingCreate
-from app.services import carry_forward_service, meeting_service, people_service, recap_service
+from app.services import (
+    brief_service,
+    carry_forward_service,
+    kb_service,
+    meeting_service,
+    people_service,
+    recap_service,
+)
 
 router = APIRouter(tags=["meetings"])
 templates = Jinja2Templates(directory="app/templates")
@@ -180,6 +188,19 @@ def meeting_detail_view(
         meeting_events.extend(it.events)
     meeting_events.sort(key=lambda ev: ev.created_at, reverse=True)
 
+    # KB and Brief context
+    linked_docs = kb_service.get_entity_links(db, "meeting", id)
+    all_docs = kb_service.list_documents(db)
+
+    # Brief person selection (query param or default absent/no_response/handover_to)
+    person_id_arg = request.query_params.get("person_id")
+    brief_person_id = (
+        int(person_id_arg)
+        if person_id_arg and person_id_arg.isdigit()
+        else brief_service.get_default_brief_person(meeting)
+    )
+    current_brief = brief_service.get_brief(db, id, brief_person_id) if brief_person_id else None
+
     ctx.update(
         {
             "meeting": meeting,
@@ -190,6 +211,10 @@ def meeting_detail_view(
             "other_meetings": other_meetings,
             "open_items": open_items,
             "meeting_events": meeting_events,
+            "linked_docs": linked_docs,
+            "all_docs": all_docs,
+            "brief_person_id": brief_person_id,
+            "current_brief": current_brief,
             "page_title": meeting.title,
         }
     )
@@ -425,3 +450,94 @@ def discard_recap(
             request=request, name="meetings/partials/notes_tab.html", context=ctx
         )
     return RedirectResponse(url=f"/meetings/{id}?tab=notes", status_code=303)
+
+
+# ── Knowledge Linking & Briefs ────────────────────────────────────────────────
+
+
+@router.post("/meetings/{id}/suggest-links", response_class=HTMLResponse)
+def suggest_meeting_links(
+    request: Request,
+    id: int,
+    db: Session = Depends(get_db),
+) -> Response:
+    """Find and suggest related KB documents for this meeting."""
+    meeting = meeting_service.get_meeting(db, id)
+    text = f"{meeting.title}\n{meeting.agenda or ''}\n{meeting.summary or ''}\n{meeting.raw_notes or ''}"
+    matches = retrieval.find_related(db, text, entity_type="meeting", entity_id=id)
+
+    all_docs = {d.id: d for d in kb_service.list_documents(db)}
+    existing_linked_ids = {lk.document_id for lk in kb_service.get_entity_links(db, "meeting", id)}
+
+    suggestions = [
+        {"match": m, "doc": all_docs.get(m.document_id)}
+        for m in matches
+        if m.document_id in all_docs and m.document_id not in existing_linked_ids
+    ]
+
+    ctx = {
+        "request": request,
+        "entity_type": "meeting",
+        "entity_id": id,
+        "suggestions": suggestions,
+    }
+    return templates.TemplateResponse(
+        request=request, name="partials/suggested_links.html", context=ctx
+    )
+
+
+@router.get("/meetings/{id}/brief", response_class=HTMLResponse)
+def view_meeting_brief(
+    request: Request,
+    id: int,
+    person_id: Annotated[int, Query()],
+    db: Session = Depends(get_db),
+) -> Response:
+    """Render the catch-up brief for a specific person."""
+    meeting = meeting_service.get_meeting(db, id)
+    brief = brief_service.get_brief(db, id, person_id)
+    ctx = _get_base_context(request, db)
+    ctx.update(
+        {
+            "meeting": meeting,
+            "brief_person_id": person_id,
+            "current_brief": brief,
+        }
+    )
+    return templates.TemplateResponse(
+        request=request, name="meetings/partials/brief_tab.html", context=ctx
+    )
+
+
+@router.post("/meetings/{id}/brief", response_class=HTMLResponse)
+def generate_meeting_brief(
+    request: Request,
+    id: int,
+    person_id: Annotated[int | None, Form()] = None,
+    target_person_id: Annotated[int | None, Form()] = None,
+    db: Session = Depends(get_db),
+) -> Response:
+    """Generate or regenerate catch-up brief for a person."""
+    selected_person_id = person_id or target_person_id
+    meeting = meeting_service.get_meeting(db, id)
+    if not selected_person_id:
+        selected_person_id = brief_service.get_default_brief_person(meeting)
+    if not selected_person_id:
+        return RedirectResponse(url=f"/meetings/{id}?tab=brief", status_code=303)
+
+    brief = brief_service.generate_brief(db, id, selected_person_id)
+    ctx = _get_base_context(request, db)
+    ctx.update(
+        {
+            "meeting": meeting,
+            "brief_person_id": selected_person_id,
+            "current_brief": brief,
+        }
+    )
+    if request.headers.get("HX-Request") == "true":
+        return templates.TemplateResponse(
+            request=request, name="meetings/partials/brief_tab.html", context=ctx
+        )
+    return RedirectResponse(
+        url=f"/meetings/{id}?tab=brief&person_id={selected_person_id}", status_code=303
+    )

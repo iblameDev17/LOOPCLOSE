@@ -10,6 +10,8 @@ from datetime import date
 
 from pydantic import BaseModel, Field
 
+# ── Recap Schemas ─────────────────────────────────────────────────────────────
+
 
 class RecapActionItem(BaseModel):
     """A single action item extracted by AI from meeting notes."""
@@ -34,3 +36,51 @@ class RecapResult(BaseModel):
     decisions: list[RecapDecision] = []
     action_items: list[RecapActionItem] = []
     open_questions: list[str] = []
+
+
+# ── KB Summarize Schemas ──────────────────────────────────────────────────────
+
+
+class KBSummarizeResult(BaseModel):
+    """Summary and tags generated for a knowledge base document."""
+
+    summary: str = ""
+    tags: list[str] = []
+
+
+# ── Link Matching Schemas ─────────────────────────────────────────────────────
+
+
+class LinkMatch(BaseModel):
+    """Single document match from LLM linking."""
+
+    document_id: int
+    relevance: float = 1.0
+    reason: str = ""
+
+
+class LinkResult(BaseModel):
+    """List of matched documents from LLM linking."""
+
+    matches: list[LinkMatch] = []
+
+
+# ── Catch-up Brief Schemas ────────────────────────────────────────────────────
+
+
+class BriefRelatedKnowledge(BaseModel):
+    document_id: int
+    title: str
+    why: str = ""
+
+
+class BriefResult(BaseModel):
+    """Personalized catch-up brief for an attendee, absentee, or handover recipient."""
+
+    tldr: str = ""
+    key_decisions: list[str] = []
+    your_items: list[str] = []
+    changed_since: list[str] = []
+    open_questions: list[str] = []
+    related_knowledge: list[BriefRelatedKnowledge] = []
+    suggested_first_steps: list[str] = []

@@ -193,6 +193,14 @@ def update_meeting_status(db: Session, meeting_id: int, new_status: str | Meetin
     db.commit()
     db.refresh(meeting)
 
+    if target == MeetingStatus.CLOSED.value:
+        try:
+            from app.services import kb_service
+
+            kb_service.auto_index_meeting(db, meeting.id)
+        except Exception as exc:
+            logger.warning("Failed to auto-index meeting %s on close: %s", meeting.id, exc)
+
     log_event(
         logger,
         "meeting.status_changed",
@@ -201,6 +209,14 @@ def update_meeting_status(db: Session, meeting_id: int, new_status: str | Meetin
         to_status=target,
     )
     return meeting
+
+
+def close_meeting(db: Session, meeting_id: int) -> Meeting:
+    """Convenience helper to close a meeting (transitioning planned -> held if needed)."""
+    meeting = get_meeting(db, meeting_id)
+    if meeting.status == MeetingStatus.PLANNED.value:
+        update_meeting_status(db, meeting_id, MeetingStatus.HELD)
+    return update_meeting_status(db, meeting_id, MeetingStatus.CLOSED)
 
 
 def save_notes(db: Session, meeting_id: int, raw_notes: str) -> Meeting:
@@ -298,6 +314,9 @@ def update_participant_attendance(
         attendance=att_val,
     )
     return participant
+
+
+update_attendance = update_participant_attendance
 
 
 def add_decision(

@@ -10,6 +10,13 @@ from app.schemas.action_item import (
     ActionItemUpdate,
 )
 from app.schemas.decision import DecisionCreate, DecisionRead
+from app.schemas.kb import (
+    CatchupBriefRead,
+    KBDocumentCreate,
+    KBDocumentRead,
+    KBLinkCreate,
+    KBLinkRead,
+)
 from app.schemas.meeting import (
     MeetingCreate,
     MeetingRead,
@@ -29,8 +36,13 @@ __all__ = [
     "ActionItemReassign",
     "ActionItemStatusUpdate",
     "ActionItemUpdate",
+    "CatchupBriefRead",
     "DecisionCreate",
     "DecisionRead",
+    "KBDocumentCreate",
+    "KBDocumentRead",
+    "KBLinkCreate",
+    "KBLinkRead",
     "MeetingCreate",
     "MeetingRead",
     "MeetingStatusUpdate",

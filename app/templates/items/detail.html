@@ -220,6 +220,124 @@
       </div>
     {% endif %}
 
+    {# Linked Knowledge Card #}
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+        <h3 style="margin: 0; font-size: 16px;">Linked Knowledge</h3>
+        {% if item.is_open %}
+          <button type="button" class="btn btn-ai btn-sm"
+                  hx-post="/items/{{ item.id }}/suggest-links"
+                  hx-target="#item-suggested-links-container"
+                  hx-indicator="#ai-item-kb-indicator">
+            <svg width="14" height="14" aria-hidden="true"><use href="#icon-sparkle"/></svg>
+            <span>Suggest related</span>
+          </button>
+        {% endif %}
+      </div>
+
+      {# Skeleton loading indicator #}
+      <div id="ai-item-kb-indicator" class="htmx-indicator" style="padding: 12px 0;">
+        <div class="skeleton-block" style="padding: 16px; border-radius: var(--radius-sm);">
+          <div class="skeleton-bar skeleton-bar-full"></div>
+          <div class="skeleton-bar skeleton-bar-med"></div>
+          <div class="skeleton-caption">AI is finding relevant documents…</div>
+        </div>
+      </div>
+
+      {# AI suggestions container #}
+      <div id="item-suggested-links-container"></div>
+
+      {# Linked documents list #}
+      {% if linked_docs %}
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+          {% for lk in linked_docs %}
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; background: var(--surface-2); padding: 12px 14px; border-radius: 6px; border: 1px solid var(--border);">
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                  <a href="/kb/{{ lk.document.id }}" target="_blank" style="font-weight: 600; font-size: 14px; color: var(--primary);">
+                    {{ lk.document.title }}
+                  </a>
+                  {% if lk.method == 'llm' %}
+                    <span class="badge" style="background: var(--ai-soft); color: var(--ai); border: 1px solid var(--ai-border);">AI match</span>
+                  {% elif lk.method == 'vector' %}
+                    <span class="badge" style="background: var(--ai-soft); color: var(--ai); border: 1px solid var(--ai-border);">Semantic</span>
+                  {% elif lk.method == 'keyword' %}
+                    <span class="badge" style="background: var(--neutral-soft); color: var(--neutral);">Keyword</span>
+                  {% else %}
+                    <span class="badge" style="background: var(--surface); border: 1px solid var(--border);">Manual</span>
+                  {% endif %}
+                  <span class="badge" style="background: var(--surface); text-transform: uppercase; font-size: 11px;">{{ lk.document.source_type }}</span>
+                </div>
+                {% if lk.reason %}
+                  <p class="text-muted small" style="margin: 0 0 4px 0;">{{ lk.reason }}</p>
+                {% endif %}
+                <p class="text-muted small" style="margin: 0; font-style: italic;">
+                  {{ lk.document.summary or (lk.document.content[:120] ~ '…') }}
+                </p>
+              </div>
+
+              {% if item.is_open %}
+                <form method="post" action="/links/{{ lk.id }}/delete">
+                  <input type="hidden" name="redirect_url" value="/items/{{ item.id }}">
+                  <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--danger);" title="Remove link">
+                    Remove
+                  </button>
+                </form>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted small" style="margin-bottom: 16px;">No knowledge base documents directly linked to this action item yet.</p>
+      {% endif %}
+
+      {# Origin meeting documents if any #}
+      {% if origin_links %}
+        <div style="margin-bottom: 20px; padding: 12px 14px; background: var(--surface-2); border-radius: 6px; border: 1px solid var(--border);">
+          <div class="text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+            From Origin Meeting: <a href="/meetings/{{ item.origin_meeting_id }}" class="text-primary">{{ item.origin_meeting.title }}</a>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            {% for olk in origin_links %}
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <a href="/kb/{{ olk.document.id }}" target="_blank" class="text-primary text-sm" style="font-weight: 500;">
+                  {{ olk.document.title }}
+                </a>
+                <span class="badge" style="font-size: 10px;">{{ olk.document.source_type }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {# Manual link form #}
+      {% if item.is_open and all_docs %}
+        <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+          <h4 style="margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);">Manually Link Document</h4>
+          <form method="post" action="/links" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+            <input type="hidden" name="entity_type" value="action_item">
+            <input type="hidden" name="entity_id" value="{{ item.id }}">
+            <input type="hidden" name="method" value="manual">
+
+            <div style="flex: 2; min-width: 180px;">
+              <select name="document_id" class="form-select" required style="width: 100%;">
+                <option value="">Select document…</option>
+                {% for d in all_docs %}
+                  <option value="{{ d.id }}">{{ d.title }} ({{ d.source_type }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div style="flex: 2; min-width: 180px;">
+              <input type="text" name="reason" class="form-input" placeholder="Reason (optional)" style="width: 100%;">
+            </div>
+            <div>
+              <button type="submit" class="btn btn-secondary btn-sm">Link</button>
+            </div>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+
     {# History Timeline card #}
     <div class="card">
       <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px;">History & Audit Timeline</h3>

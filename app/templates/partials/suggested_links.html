@@ -1,0 +1,47 @@
+<div id="suggested-links-box" style="margin-top: 16px; padding: 16px; background: var(--surface-2); border-radius: var(--radius-md); border: 1px dashed var(--ai-border);">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <svg width="16" height="16" style="color: var(--ai);" aria-hidden="true"><use href="#icon-sparkle"/></svg>
+      <strong style="font-size: 14px; color: var(--ai);">AI Suggested Related Knowledge</strong>
+    </div>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('suggested-links-box').remove()">
+      Dismiss All
+    </button>
+  </div>
+
+  {% if suggestions %}
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      {% for s in suggestions %}
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; background: var(--surface); padding: 12px 14px; border-radius: 6px; border: 1px solid var(--border);">
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <a href="/kb/{{ s.doc.id }}" target="_blank" style="font-weight: 600; font-size: 14px; color: var(--text);">
+                {{ s.doc.title }}
+              </a>
+              {% if s.match.method == 'llm' %}
+                <span class="badge" style="background: var(--ai-soft); color: var(--ai); border: 1px solid var(--ai-border);">AI match</span>
+              {% elif s.match.method == 'vector' %}
+                <span class="badge" style="background: var(--ai-soft); color: var(--ai); border: 1px solid var(--ai-border);">Semantic</span>
+              {% else %}
+                <span class="badge" style="background: var(--neutral-soft); color: var(--neutral);">Keyword</span>
+              {% endif %}
+              <span class="text-muted small">Score: {{ (s.match.score * 100)|int }}%</span>
+            </div>
+            <p class="text-muted small" style="margin: 0;">{{ s.match.reason }}</p>
+          </div>
+
+          <form method="post" action="/links">
+            <input type="hidden" name="entity_type" value="{{ entity_type }}">
+            <input type="hidden" name="entity_id" value="{{ entity_id }}">
+            <input type="hidden" name="document_id" value="{{ s.doc.id }}">
+            <input type="hidden" name="reason" value="{{ s.match.reason }}">
+            <input type="hidden" name="method" value="{{ s.match.method }}">
+            <button type="submit" class="btn btn-primary btn-sm">Accept Link</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-muted small" style="margin: 0;">No matching knowledge base documents found with relevance &ge; 50%.</p>
+  {% endif %}
+</div>

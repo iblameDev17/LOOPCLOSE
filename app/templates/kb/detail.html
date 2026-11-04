@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <a href="/kb" class="btn btn-ghost btn-sm" style="margin-bottom: 12px; display: inline-flex; align-items: center; gap: 4px;">
+    &larr; Back to Knowledge Base
+  </a>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+        <h1 style="font-size: 26px; font-weight: 700; margin: 0;">{{ doc.title }}</h1>
+        <span class="badge" style="background: var(--surface-2); text-transform: uppercase;">
+          {{ doc.source_type }}
+        </span>
+      </div>
+      <p class="text-muted small" style="margin: 0;">
+        Created {{ doc.created_at.strftime('%d %b %Y, %H:%M UTC') }} &middot;
+        Last updated {{ doc.updated_at.strftime('%d %b %Y, %H:%M UTC') }}
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <form method="post" action="/kb/{{ doc.id }}/reindex">
+        <button type="submit" class="btn btn-secondary btn-sm" title="Re-generate summary and tags">
+          <svg width="14" height="14" aria-hidden="true"><use href="#icon-sparkle"/></svg>
+          <span>Re-summarize</span>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-2" style="grid-template-columns: 2fr 1fr; gap: 24px;">
+  <!-- Main Content -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    <!-- AI Summary Card -->
+    <div class="card" style="border-left: 4px solid var(--ai);">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 class="card-title" style="font-size: 15px; margin: 0;">Summary</h3>
+        <span class="badge badge-ai">
+          <svg width="12" height="12" aria-hidden="true"><use href="#icon-sparkle"/></svg>
+          ✦ AI Summary
+        </span>
+      </div>
+      <div style="padding: 16px;">
+        <p style="margin: 0; line-height: 1.6; font-size: 14px;">
+          {{ doc.summary or "No summary available." }}
+        </p>
+
+        {% if doc.tags %}
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px;">
+          {% for tag in doc.tags %}
+            <span class="badge" style="background: var(--primary-soft); color: var(--primary);">#{{ tag }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Full Document Content -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title" style="font-size: 15px; margin: 0;">Document Content</h3>
+      </div>
+      <div style="padding: 20px;">
+        <div style="background: var(--surface-2); padding: 18px; border-radius: 6px; white-space: pre-wrap; line-height: 1.6; font-family: inherit; font-size: 14px;">
+{{ doc.content }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Side Column: References -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    <div class="card" style="padding: 20px;">
+      <h3 style="margin-top: 0; margin-bottom: 14px; font-size: 16px;">Referenced By</h3>
+      <p class="text-muted small" style="margin-bottom: 16px;">Entities linked to this document in team memory:</p>
+
+      {% if referrers %}
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          {% for ref in referrers %}
+            <div style="background: var(--surface-2); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span class="badge" style="background: var(--surface); text-transform: capitalize; font-size: 11px;">
+                  {{ ref.entity_type | replace('_', ' ') }}
+                </span>
+                <span class="text-muted small">{{ ref.method }}</span>
+              </div>
+              <p class="text-muted small" style="margin: 4px 0 6px 0;">{{ ref.reason or "Linked context" }}</p>
+              <div>
+                {% if ref.entity_type == 'meeting' %}
+                  <a href="/meetings/{{ ref.entity_id }}" class="text-primary small" style="font-weight: 600;">View Meeting #{{ ref.entity_id }} &rarr;</a>
+                {% elif ref.entity_type == 'action_item' %}
+                  <a href="/items/{{ ref.entity_id }}" class="text-primary small" style="font-weight: 600;">View Action Item #{{ ref.entity_id }} &rarr;</a>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted small" style="margin: 0; font-style: italic;">No items or meetings are currently linked to this document.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 720px; margin: 0 auto;">
+  <div style="margin-bottom: 24px;">
+    <a href="/kb" class="btn btn-ghost btn-sm" style="margin-bottom: 12px; display: inline-flex; align-items: center; gap: 4px;">
+      &larr; Back to Knowledge Base
+    </a>
+    <h1 style="font-size: 26px; font-weight: 700; margin: 0 0 6px 0;">Add Document to Knowledge Base</h1>
+    <p class="text-muted small" style="margin: 0;">Add notes, design specs, chat logs, or call transcripts. AI will automatically summarize and extract tags.</p>
+  </div>
+
+  {% if error %}
+  <div class="banner banner-ai-error" style="margin-bottom: 20px;">
+    <div class="banner-body">
+      <strong>Error:</strong> {{ error }}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card" style="padding: 24px;">
+    <form method="post" action="/kb" enctype="multipart/form-data">
+      <!-- Title -->
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label class="label" for="doc-title">Document Title <span style="color: var(--danger);">*</span></label>
+        <input type="text" id="doc-title" name="title" class="input" required minlength="3" maxlength="200"
+               value="{{ form_data.title if form_data else '' }}"
+               placeholder="e.g. Q4 Deployment Architecture & Checklist" style="width: 100%;">
+        <span class="text-muted small">Descriptive title (3–200 characters)</span>
+      </div>
+
+      <!-- Source Type -->
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label class="label" for="doc-source">Source Type</label>
+        <select id="doc-source" name="source_type" class="select" style="width: 100%;">
+          {% for s in sources %}
+            {% if s != 'meeting' %}
+            <option value="{{ s }}" {% if form_data and form_data.source_type == s %}selected{% endif %}>
+              {{ s | capitalize }}
+            </option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- File Upload -->
+      <div class="form-group" style="margin-bottom: 20px; background: var(--surface-2); padding: 16px; border-radius: var(--radius-sm);">
+        <label class="label" for="doc-file">Option A: Upload File (.txt or .md, &le; 1 MB)</label>
+        <input type="file" id="doc-file" name="file" accept=".txt,.md,text/plain,text/markdown" class="input" style="width: 100%; padding: 8px;">
+        <span class="text-muted small">File content will be read as UTF-8 text.</span>
+      </div>
+
+      <!-- Paste Content -->
+      <div class="form-group" style="margin-bottom: 24px;">
+        <label class="label" for="doc-content">Option B: Or Paste Content Directly</label>
+        <textarea id="doc-content" name="content" class="textarea" rows="12" maxlength="100000"
+                  placeholder="Paste documentation text, meeting transcript, or team notes here…"
+                  style="width: 100%; font-family: inherit; line-height: 1.6;">{{ form_data.content if form_data else '' }}</textarea>
+        <span class="text-muted small">Up to 100,000 characters</span>
+      </div>
+
+      <!-- Actions -->
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <button type="submit" class="btn btn-primary">
+          <svg width="14" height="14" aria-hidden="true"><use href="#icon-sparkle"/></svg>
+          <span>Save &amp; Generate Summary</span>
+        </button>
+        <a href="/kb" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

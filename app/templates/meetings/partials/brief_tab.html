@@ -1,10 +1,192 @@
 <div id="brief-tab-content" class="card">
-  <div class="card-header">
-    <h2 class="card-title">Catch-Up Brief</h2>
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <h2 class="card-title">Personalized Catch-Up Brief</h2>
+      <p class="text-muted small" style="margin: 4px 0 0 0;">60-second synthesized brief tailored for teammates who missed the meeting or are taking over.</p>
+    </div>
+
+    <!-- Brief Person Selector & Generate Action -->
+    <form hx-post="/meetings/{{ meeting.id }}/brief"
+          hx-target="#brief-tab-content"
+          hx-swap="outerHTML"
+          hx-indicator="#ai-brief-indicator"
+          style="display: flex; gap: 10px; align-items: center;">
+      <select name="person_id" class="select" style="min-width: 180px;"
+              onchange="this.form.requestSubmit()">
+        {% for p in meeting.participants %}
+          <option value="{{ p.person.id }}" {% if brief_person_id == p.person.id %}selected{% endif %}>
+            {{ p.person.name }} ({{ p.attendance | replace('_', ' ') }})
+          </option>
+        {% endfor %}
+        {% if not meeting.participants %}
+          {% for p in all_people %}
+            <option value="{{ p.id }}" {% if brief_person_id == p.id %}selected{% endif %}>
+              {{ p.name }}
+            </option>
+          {% endfor %}
+        {% endif %}
+      </select>
+
+      <button type="submit" class="btn btn-ai btn-sm">
+        <svg width="14" height="14" aria-hidden="true"><use href="#icon-sparkle"/></svg>
+        <span>Generate Brief</span>
+      </button>
+    </form>
   </div>
-  <div style="padding: 32px; text-align: center;">
-    <svg width="40" height="40" class="text-muted" aria-hidden="true" style="margin-bottom: 12px;"><use href="#icon-sparkle"/></svg>
-    <div style="font-weight: 600; margin-bottom: 4px;">Personalized Catch-Up Brief</div>
-    <p class="text-muted small" style="margin-bottom: 16px;">AI-generated catch-up brief for absent members and handover recipients is scheduled for Unit 6.</p>
+
+  <!-- Loading Skeleton Indicator -->
+  <div id="ai-brief-indicator" class="htmx-indicator" style="padding: 20px;">
+    <div class="skeleton-block" style="padding: 24px; border-radius: var(--radius-sm);">
+      <div class="skeleton-bar skeleton-bar-full"></div>
+      <div class="skeleton-bar skeleton-bar-med"></div>
+      <div class="skeleton-bar skeleton-bar-short"></div>
+      <div class="skeleton-caption">AI is assembling meeting context, decisions, items, and team memory…</div>
+    </div>
+  </div>
+
+  <div style="padding: 20px;">
+    {% if current_brief %}
+      {% set b = current_brief.content_json %}
+
+      <!-- Top Meta Banner -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          {% if current_brief.generated_by == 'ai' %}
+            <span class="badge badge-ai">
+              <svg width="12" height="12" aria-hidden="true"><use href="#icon-sparkle"/></svg>
+              ✦ AI Brief
+            </span>
+          {% else %}
+            <span class="badge" style="background: var(--warning-soft); color: var(--warning);">
+              Template Brief (Fallback)
+            </span>
+          {% endif %}
+          <span class="text-muted small">Generated {{ current_brief.created_at.strftime('%d %b %Y, %H:%M UTC') }}</span>
+        </div>
+
+        <button type="button" class="btn btn-secondary btn-sm" onclick="copyBriefText()">
+          Copy Brief
+        </button>
+      </div>
+
+      {% if current_brief.generated_by == 'fallback' %}
+      <div class="banner banner-ai-fallback">
+        <div class="banner-body">
+          <strong>AI was unavailable:</strong> this brief was assembled directly from database items and decisions.
+        </div>
+        <form hx-post="/meetings/{{ meeting.id }}/brief" hx-target="#brief-tab-content" hx-swap="outerHTML" hx-indicator="#ai-brief-indicator">
+          <input type="hidden" name="person_id" value="{{ brief_person_id }}">
+          <button type="submit" class="btn btn-secondary btn-sm">Retry with AI</button>
+        </form>
+      </div>
+      {% endif %}
+
+      <div id="brief-copyable-content" style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- TL;DR -->
+        <div style="background: var(--surface-2); padding: 18px 20px; border-radius: var(--radius-sm); border-left: 4px solid var(--primary);">
+          <h3 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--primary); margin: 0 0 6px 0;">TL;DR</h3>
+          <p style="font-size: 15px; line-height: 1.6; margin: 0; font-weight: 500;">
+            {{ b.tldr }}
+          </p>
+        </div>
+
+        <!-- Key Decisions -->
+        {% if b.key_decisions %}
+        <div>
+          <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 10px;">Key Decisions</h3>
+          <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+            {% for d in b.key_decisions %}
+              <li style="margin-bottom: 4px;">{{ d }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <!-- Your Action Items -->
+        <div>
+          <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 10px;">Your Action Items</h3>
+          {% if b.your_items %}
+            <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+              {% for it in b.your_items %}
+                <li style="margin-bottom: 4px; font-weight: 500;">{{ it }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-muted small" style="margin: 0; font-style: italic;">No items currently assigned to you for this meeting.</p>
+          {% endif %}
+        </div>
+
+        <!-- What Changed Since -->
+        {% if b.changed_since %}
+        <div>
+          <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 10px;">What Changed Since</h3>
+          <ul style="margin: 0; padding-left: 20px; line-height: 1.6; color: var(--text-muted);">
+            {% for c in b.changed_since %}
+              <li style="margin-bottom: 4px;">{{ c }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <!-- Open Questions -->
+        {% if b.open_questions %}
+        <div>
+          <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 10px;">Open Questions</h3>
+          <ul style="margin: 0; padding-left: 20px; line-height: 1.6; color: var(--text-muted);">
+            {% for q in b.open_questions %}
+              <li style="margin-bottom: 4px;">{{ q }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <!-- Related Knowledge -->
+        {% if b.related_knowledge %}
+        <div>
+          <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 10px;">Related Team Knowledge</h3>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            {% for k in b.related_knowledge %}
+              <div style="background: var(--surface-2); padding: 10px 14px; border-radius: 6px; font-size: 14px;">
+                <a href="/kb/{{ k.document_id }}" target="_blank" style="font-weight: 600; color: var(--primary);">
+                  {{ k.title }}
+                </a>
+                {% if k.why %} &middot; <span class="text-muted small">{{ k.why }}</span>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Suggested First Steps -->
+        {% if b.suggested_first_steps %}
+        <div>
+          <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 10px;">Suggested First Steps</h3>
+          <ol style="margin: 0; padding-left: 20px; line-height: 1.6;">
+            {% for step in b.suggested_first_steps %}
+              <li style="margin-bottom: 4px;">{{ step }}</li>
+            {% endfor %}
+          </ol>
+        </div>
+        {% endif %}
+      </div>
+    {% else %}
+      <div style="padding: 48px 16px; text-align: center;">
+        <svg width="44" height="44" class="text-muted" aria-hidden="true" style="margin-bottom: 14px;"><use href="#icon-sparkle"/></svg>
+        <h3 style="margin-bottom: 8px;">No brief generated yet</h3>
+        <p class="text-muted small" style="max-width: 440px; margin: 0 auto 16px auto;">
+          Select a person above and click <strong>Generate Brief</strong> to produce an AI-powered 60-second digest tailored to their responsibilities.
+        </p>
+      </div>
+    {% endif %}
   </div>
 </div>
+
+<script>
+function copyBriefText() {
+  const el = document.getElementById('brief-copyable-content');
+  if (!el) return;
+  navigator.clipboard.writeText(el.innerText).then(() => {
+    alert('Brief copied to clipboard!');
+  });
+}
+</script>

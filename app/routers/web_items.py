@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.enums import ActionStatus, OutcomeType, Priority
 from app.errors import ValidationFailed
+from app.kb import retrieval
 from app.schemas.action_item import (
     ActionItemClose,
     ActionItemCreate,
@@ -22,6 +23,7 @@ from app.schemas.action_item import (
 from app.services import (
     action_item_service,
     carry_forward_service,
+    kb_service,
     meeting_service,
     people_service,
 )
@@ -159,11 +161,21 @@ def item_detail_view(
     item = action_item_service.get_action_item(db, id)
     ctx = _get_base_context(request, db)
     active_people = people_service.list_people(db, active_only=True)
+    linked_docs = kb_service.get_entity_links(db, "action_item", id)
+    origin_links = (
+        kb_service.get_entity_links(db, "meeting", item.origin_meeting_id)
+        if item.origin_meeting_id
+        else []
+    )
+    all_docs = kb_service.list_documents(db)
 
     ctx.update(
         {
             "item": item,
             "active_people": active_people,
+            "linked_docs": linked_docs,
+            "origin_links": origin_links,
+            "all_docs": all_docs,
             "page_title": f"Item #{item.id}: {item.title}",
         }
     )
@@ -240,6 +252,39 @@ def reopen_item_action(
     """Reopen a closed item."""
     action_item_service.reopen_action_item(db, id)
     return RedirectResponse(url=f"/items/{id}", status_code=303)
+
+
+@router.post("/items/{id}/suggest-links", response_class=HTMLResponse)
+def suggest_item_links(
+    request: Request,
+    id: int,
+    db: Session = Depends(get_db),
+) -> Response:
+    """Find and suggest related KB documents for this action item."""
+    item = action_item_service.get_action_item(db, id)
+    text = f"{item.title}\n{item.description or ''}"
+    matches = retrieval.find_related(db, text, entity_type="action_item", entity_id=id)
+
+    all_docs = {d.id: d for d in kb_service.list_documents(db)}
+    existing_linked_ids = {
+        lk.document_id for lk in kb_service.get_entity_links(db, "action_item", id)
+    }
+
+    suggestions = [
+        {"match": m, "doc": all_docs.get(m.document_id)}
+        for m in matches
+        if m.document_id in all_docs and m.document_id not in existing_linked_ids
+    ]
+
+    ctx = {
+        "request": request,
+        "entity_type": "action_item",
+        "entity_id": id,
+        "suggestions": suggestions,
+    }
+    return templates.TemplateResponse(
+        request=request, name="partials/suggested_links.html", context=ctx
+    )
 
 
 @router.post("/items/{id}/edit")

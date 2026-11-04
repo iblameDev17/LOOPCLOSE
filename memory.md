@@ -21,17 +21,17 @@
 ## 1. CURRENT STATE SNAPSHOT  *(rewrite in place every pass)*
 
 ```
-Last updated:            2026-11-04T17:45:00Z
-Last pass #:             5
-Last unit worked on:     Unit 5 (AI foundation + recap)
+Last updated:            2026-11-04T18:55:00Z
+Last pass #:             6
+Last unit worked on:     Unit 6 (KB + linking + catch-up brief)
 Agent / tool:            Antigravity (Gemini 3.8 Flash)
 Repo runnable locally:   yes (uvicorn app.main:app, verified)
-Tests passing:           yes [count: 56]
-Pipeline status (main):  diagnostic smoke test + Docker ARG commit injection configured
+Tests passing:           yes [count: 73]
+Pipeline status (main):  diagnostic smoke test + Docker ARG commit injection + Trivy scan configured
 Live URL:                (configured on Render)
-Units complete:          Unit 1, Unit 2, Unit 3, Unit 4, Unit 5
+Units complete:          Unit 1, Unit 2, Unit 3, Unit 4, Unit 5, Unit 6
 Units in progress:       none
-Next recommended unit:   Unit 6 (KB + linking + catch-up brief)
+Next recommended unit:   Unit 7 (Special feature: Nudge Center)
 ```
 
 ---
@@ -74,42 +74,52 @@ Format: `path — purpose — created in Unit X — notes/gotchas`
 - `app/main.py` — FastAPI application factory, lifespan handler, router/middleware/template registration — Unit 1 — starts app
 
 **Core Domain (Models, Schemas, Services):**
-- `app/models/__init__.py` — exports all models — Unit 1 (updated Unit 3/4)
+- `app/models/__init__.py` — exports all models — Unit 1 (updated Unit 3/4/6)
 - `app/models/person.py` — Person model (initials property, active/on_leave flags, relationships) — Unit 3
 - `app/models/meeting.py` — Meeting and MeetingParticipant models (kind, status, handover fields, notes, relationships) — Unit 3
 - `app/models/decision.py` — Decision model (meeting relationship, created_at) — Unit 3
 - `app/models/action_item.py` — ActionItem and ActionItemEvent models (full fields, is_open, is_overdue, overdue_days, relationships) — Unit 3 (completed Unit 4)
-- `app/schemas/__init__.py` — exports all schemas — Unit 1 (updated Unit 3/4)
+- `app/models/kb.py` — KBDocument, KBChunk (table def), and KBLink models with unique constraint uq_kb_link — Unit 6
+- `app/models/brief.py` — CatchupBrief model (meeting_id, person_id, content_json, generated_by) — Unit 6
+- `app/schemas/__init__.py` — exports all schemas — Unit 1 (updated Unit 3/4/6)
 - `app/schemas/person.py` — PersonCreate and PersonRead Pydantic schemas with email regex validation — Unit 3
 - `app/schemas/meeting.py` — MeetingCreate, MeetingUpdate, MeetingStatusUpdate, NotesUpdate, ParticipantAttendanceUpdate schemas — Unit 3
 - `app/schemas/decision.py` — DecisionCreate and DecisionRead schemas — Unit 3
 - `app/schemas/action_item.py` — ActionItemCreate, ActionItemUpdate, ActionItemClose, ActionItemReassign, ActionItemStatusUpdate, ActionItemRead schemas — Unit 4
-- `app/services/__init__.py` — exports services — Unit 1 (updated Unit 3/4)
+- `app/schemas/kb.py` — KBDocumentCreate, KBDocumentRead, KBLinkCreate, KBLinkRead, CatchupBriefRead schemas — Unit 6
+- `app/services/__init__.py` — exports services — Unit 1 (updated Unit 3/4/6)
 - `app/services/people_service.py` — list, get, and create people with duplicate email check and event logging — Unit 3
-- `app/services/meeting_service.py` — meeting/handover creation, lifecycle state transitions, attendance, notes caps, decisions, handover reassign — Unit 3 (updated Unit 4)
+- `app/services/meeting_service.py` — meeting/handover creation, lifecycle state transitions, attendance, notes caps, decisions, handover reassign, auto-index meeting on close — Unit 3 (updated Unit 4/6)
 - `app/services/action_item_service.py` — full action item lifecycle, status transitions, close with outcome, reopen, reassign, audit events — Unit 4
 - `app/services/carry_forward_service.py` — carry forward open items across meetings, carried count increment, audit events — Unit 4
-- `app/services/recap_service.py` — generate recap proposal, exact/fuzzy owner resolution, apply/discard proposals — Unit 5
+- `app/services/recap_service.py` — generate recap proposal, exact/fuzzy owner resolution, apply/discard proposals, auto-index meeting on recap apply — Unit 5 (updated Unit 6)
+- `app/services/kb_service.py` — document CRUD, text/md validation <=1MB, AI summarizer with 200-char fallback, link management, auto-indexing meetings — Unit 6
+- `app/services/brief_service.py` — catch-up brief generation, default person selection (absent/no_response/handover/first), template fallback — Unit 6
+- `app/kb/__init__.py` — KB package marker — Unit 1
+- `app/kb/retrieval.py` — KBMatch, find_related() with retriever chain (vector -> llm -> keyword fallback), structured kb.retrieval logging — Unit 6
 
 **AI Subsystem:**
 - `app/ai/__init__.py` — AI subsystem package marker — Unit 1
 - `app/ai/provider.py` — LLMProvider runtime-checkable protocol with generate_json and embed — Unit 5
 - `app/ai/gemini.py` — GeminiProvider wrapping google-genai 2.34+ SDK with types.GenerateContentConfig — Unit 5
-- `app/ai/fake.py` — FakeProvider for deterministic testing with timeout/invalid_json/empty failure toggles — Unit 5
+- `app/ai/fake.py` — FakeProvider for deterministic testing with timeout/invalid_json/empty failure toggles and canned recap/brief/summary/link responses — Unit 5 (updated Unit 6)
 - `app/ai/client.py` — AIClient.run_structured() with retry, timeout, code-fence strip, Pydantic validation, structured ai.call logging — Unit 5
-- `app/ai/schemas.py` — Pydantic output schemas (RecapResult, RecapActionItem, RecapDecision) — Unit 5
+- `app/ai/schemas.py` — Pydantic output schemas (RecapResult, BriefResult, KBSummarizeResult, LinkResult) — Unit 5 (updated Unit 6)
 - `app/ai/fallbacks.py` — heuristic_recap() rule-based extraction from raw notes — Unit 5
 - `app/ai/prompts/__init__.py` — prompts package marker — Unit 1
 - `app/ai/prompts/recap.py` — recap prompt template v1 with delimited injection protection and meeting date resolution — Unit 5
+- `app/ai/prompts/kb_summary.py` — kb_summary.v1 prompt for document summarization and tag extraction — Unit 6
+- `app/ai/prompts/link.py` — link.v1 prompt for entity-to-KB linking with relevance scoring — Unit 6
+- `app/ai/prompts/brief.py` — brief.v1 prompt for 60-second personalized catch-up briefs — Unit 6
 
 **Routers:**
 - `app/routers/__init__.py` — package marker — Unit 1
 - `app/routers/health.py` — `/health` endpoint returning system status, db check, commit, and AI config status — Unit 1
 - `app/routers/web_dashboard.py` — `/` dashboard route wired with real cards (My open items, Overdue, Needs owner, Upcoming meetings, Decisions) — Unit 1 (updated Unit 4)
 - `app/routers/web_people.py` — `/people` directory view, inline create, and `/viewing-as` persona switcher — Unit 3
-- `app/routers/web_meetings.py` — `/meetings` list, `/meetings/new` form, `/meetings/{id}` detail & tab HTMX endpoints, decisions, attendance, carried items — Unit 3 (updated Unit 4)
-- `app/routers/web_items.py` — `/items` list with filters, `/items/new`, `/items/{id}` detail with side card & timeline, `/items/{id}/close`, `/items/{id}/status`, `/items/{id}/reassign`, `/items/{id}/reopen` — Unit 4
-- `app/routers/web_kb.py` — placeholder module for KB web routes — Unit 1 (stub for Unit 6)
+- `app/routers/web_meetings.py` — `/meetings` list, `/meetings/new` form, `/meetings/{id}` detail & tabs (overview, notes, items, history, knowledge, brief), suggest-links, brief endpoints — Unit 3 (updated Unit 4/5/6)
+- `app/routers/web_items.py` — `/items` list with filters, `/items/new`, `/items/{id}` detail with side card, linked knowledge card, suggest-links endpoint, timeline, close, status, reassign, reopen — Unit 4 (updated Unit 6)
+- `app/routers/web_kb.py` — `/kb` list/search, `/kb/new` form & upload, `/kb/{id}` detail & referrers, `/kb/{id}/reindex`, `/links`, `/links/{id}/delete` — Unit 6
 - `app/routers/web_nudges.py` — placeholder module for nudges web routes — Unit 1 (stub for Unit 7)
 - `app/routers/api_v1.py` — placeholder module for API routes — Unit 1 (stub)
 
@@ -118,8 +128,9 @@ Format: `path — purpose — created in Unit X — notes/gotchas`
 - `app/templates/dashboard.html` — dynamic dashboard layout wired with cards per design.md §5.1 — Unit 1 (updated Unit 4)
 - `app/templates/error.html` — friendly error page with HTTP code, description, and copyable Request ID — Unit 1
 - `app/templates/partials/item_row.html` — reusable item row component with priority edge, badges, avatar, carried chips — Unit 4
+- `app/templates/partials/suggested_links.html` — reusable AI link suggestions partial with Accept/Dismiss — Unit 6
 - `app/templates/items/list.html` — filterable action items list with status chips, owner select, meeting filter, overdue checkbox — Unit 4
-- `app/templates/items/detail.html` — item detail page with side card, action buttons, expanding close with outcome panel, history timeline — Unit 4
+- `app/templates/items/detail.html` — item detail page with side card, action buttons, close panel, linked knowledge card with AI suggest, history timeline — Unit 4 (updated Unit 6)
 - `app/templates/people/index.html` — People directory table, avatar pills, active/on-leave status badges, inline create form — Unit 3
 - `app/templates/meetings/list.html` — Filterable meeting/handover list with kind and status pills, avatars, empty state — Unit 3
 - `app/templates/meetings/form.html` — Meeting/Handover create form with dynamic kind toggle, participant checkboxes, handover pickers — Unit 3
@@ -130,8 +141,11 @@ Format: `path — purpose — created in Unit X — notes/gotchas`
 - `app/templates/meetings/partials/participants_card.html` — Participants roster with inline HTMX attendance dropdowns and add form — Unit 3
 - `app/templates/meetings/partials/items_tab.html` — Meeting action items list with inline add form — Unit 3 (completed Unit 4)
 - `app/templates/meetings/partials/history_tab.html` — Meeting event timeline for all item and meeting mutations — Unit 3 (completed Unit 4)
-- `app/templates/meetings/partials/brief_tab.html` — Placeholder tab for Unit 6 — Unit 3
-- `app/templates/meetings/partials/knowledge_tab.html` — Placeholder tab for Unit 6 — Unit 3
+- `app/templates/meetings/partials/brief_tab.html` — Personalized catch-up brief with person selector, Generate brief button with skeleton loader, formatted sections, Copy button, and fallback banner — Unit 6
+- `app/templates/meetings/partials/knowledge_tab.html` — Linked KB docs with method badges, Suggest related AI button with skeleton loader, manual link form, and remove buttons — Unit 6
+- `app/templates/kb/list.html` — Knowledge Base document directory with search filter, source pills, and Add button — Unit 6
+- `app/templates/kb/form.html` — Document creation form with title, source type, paste content, file upload (<=1MB, UTF-8), and validation — Unit 6
+- `app/templates/kb/detail.html` — Document detail view with metadata, summary card, full content, tags, Reindex action, and Referenced By section — Unit 6
 - `app/static/css/app.css` — full CSS design system implementing tokens, dark mode, buttons, cards, badges, timeline, forms — Unit 1
 - `app/static/js/app.js` — vanilla JS helpers for toast notifications, clipboard copy, tabs, and theme toggling — Unit 1
 
@@ -142,6 +156,7 @@ Format: `path — purpose — created in Unit X — notes/gotchas`
 - `tests/test_unit3_core_domain.py` — 15 tests for lifecycle, handover rules, participant uniqueness, attendance, notes cap, and UI endpoints — Unit 3
 - `tests/test_unit4_action_items.py` — 12 unit/integration tests for action items lifecycle, outcomes, blocked reasons, carry forward semantics, and routes — Unit 4
 - `tests/test_unit5_ai_recap.py` — 12 unit/integration tests for AIClient, fence stripping, timeout/invalid_json retries, heuristic extraction, owner resolution, apply proposals, and web routes — Unit 5
+- `tests/test_unit6_kb_brief.py` — 17 unit/integration tests covering document creation, upload validation, summary fallback, find_related happy path & keyword fallback, link uniqueness & deletion, auto-indexing meetings, brief default person selection, brief generation with fallback template, and web endpoints — Unit 6
 - `logs/.gitkeep` — keeps logs directory tracked in git — Unit 1
 
 ---
@@ -210,6 +225,7 @@ uvicorn app.main:app --reload
 | 14 | 2026-10-30 | Unit 4 | Close with outcome enforcement | Status cannot be directly set to done/dropped via change_status; must call close_action_item with OutcomeType and outcome_note (>=5 chars) | `app/services/action_item_service.py` |
 | 15 | 2026-11-04 | Unit 5 | Robust AIClient with retry & heuristic fallback | AIClient.run_structured() strips markdown fences, retries invalid JSON once with schema reminder, and falls back to deterministic heuristic extraction on failure. Never raises for AI issues. | `app/ai/client.py`, `app/ai/fallbacks.py`, `app/services/recap_service.py` |
 | 16 | 2026-11-04 | DevOps | Added Trivy container vulnerability scanning | Runs aquasecurity/trivy-action@v0.36.0 on the built image with `load: true` to detect OS and library vulnerabilities (CRITICAL,HIGH) | `.github/workflows/ci-cd.yml` |
+| 17 | 2026-11-04 | Unit 6 | Level A RAG & catch-up brief design | find_related() uses LLM catalogue scoring (max 50 docs, relevance >= 0.5, limit 3) with keyword token overlap fallback; auto-indexing meetings on close & recap apply; link idempotency + uq_kb_link unique constraint; brief default person prioritization (absent > no_response > handover_to > first) with template fallback | `app/kb/retrieval.py`, `app/services/kb_service.py`, `app/services/brief_service.py` |
 
 ---
 
@@ -221,20 +237,17 @@ uvicorn app.main:app --reload
 
 ## 7. NEXT PASS CONSIDERATIONS  *(rewrite in place every pass — the most important section for the next agent)*
 
-- **Next unit:** Unit 6 — Knowledge base + linking (Level A RAG) + catch-up brief (`TASKS.md` U6-T1 to U6-T8).
-- **Files to create/modify in Unit 6:**
-  - `app/models/kb.py` (`KBDocument`, `KBLink`, `CatchupBrief`, and `KBChunk` table stub)
-  - `app/schemas/kb.py` (`KBDocumentCreate`, `CatchupBriefRead`, etc.)
-  - `app/services/kb_service.py` (document upload/paste validation <=1MB, auto-index meetings, summarize)
-  - `app/kb/retrieval.py` (`find_related`, `LLMSummaryRetriever`, `KeywordRetriever` fallback chain)
-  - `app/ai/prompts/brief.py` (`brief.v1` catch-up brief prompt)
-  - `app/ai/prompts/link.py` (`link.v1` entity-document linking prompt)
-  - `app/ai/prompts/kb_summary.py` (`kb_summary.v1` document summarization prompt)
-  - `app/services/brief_service.py` (brief generation with fallback template)
-  - `app/routers/web_kb.py` and `app/routers/web_meetings.py` (KB routes, Brief tab, suggest-links endpoints)
-  - `app/templates/kb/` (`list.html`, `detail.html`, `form.html`) and meeting partials (`brief_tab.html`, `knowledge_tab.html`)
-  - `tests/test_unit6_kb_brief.py`
-- **Checklist before running Unit 6:** Ensure `ruff format --check .`, `ruff check .`, and `pytest` are all passing.
+- **Next unit:** Unit 7 — Special feature: Nudge Center (`TASKS.md` U7-T1 to U7-T6).
+- **Files to create/modify in Unit 7:**
+  - `app/models/nudge.py` (`FollowupDraft` model)
+  - `app/services/nudge_service.py` (transparent risk scoring per PRD §5.8, grouped listing by owner, reasons as chips, last update >= 7 days check)
+  - `app/ai/prompts/nudge.py` (`nudge.v1` prompt for friendly/firm follow-up messages)
+  - `app/ai/fallbacks.py` (template fallback for follow-up drafts)
+  - `app/routers/web_nudges.py` (`/nudges` view, draft follow-up endpoint, mark-sent endpoint with `nudged` event)
+  - `app/templates/nudges/` (`index.html` with risk badges, tone toggle, draft card, copy and mark sent actions)
+  - `app/templates/base.html` & `app/templates/dashboard.html` (nav count pill and dashboard widget)
+  - `tests/test_unit7_nudges.py` (scoring matrix unit tests, ordering, AI drafting and template fallback, mark-sent audit events)
+- **Checklist before running Unit 7:** Ensure `ruff format --check .`, `ruff check .`, and `pytest` are all passing.
 
 ---
 
@@ -532,6 +545,81 @@ uvicorn app.main:app --reload
 **Next pass should:**
 1. Follow `AGENTS.md` ritual and read `memory.md`.
 2. Build Unit 6: Knowledge base + linking (Level A RAG) + catch-up brief (`TASKS.md` U6-T1 to U6-T8).
+
+---
+
+### Pass 6 — Unit 6: Knowledge base + linking (Level A RAG) + catch-up brief
+- **Date/time (UTC):** 2026-11-04T18:55:00Z
+- **Agent/tool:** Antigravity — Gemini 3.8 Flash
+- **Goal of this pass:** Build full Knowledge Base subsystem (models, services, routes, templates), Level A RAG retriever (`find_related()` with LLM catalogue linking and keyword fallback), entity-document link management, auto-indexing meetings into KB, personalized catch-up briefs with template fallback, and comprehensive test suite.
+- **Status:** complete
+
+**Done (verified):**
+- U6-T1: Models `KBDocument`, `KBLink` (with `uq_kb_link` unique constraint on entity_type + entity_id + document_id), `KBChunk` table schema, and `CatchupBrief` created in `app/models/kb.py` and `app/models/brief.py` and exported.
+- U6-T2: `app/services/kb_service.py` implemented document creation with AI summarization and 200-char fallback, `.txt`/`.md` upload validation (<=1MB, UTF-8), listing, search, detail with "Referenced by", reindexing, and `auto_index_meeting` on meeting close and recap apply. Structured `kb.*` events emitted.
+- U6-T3: `app/kb/retrieval.py` implemented `find_related()` with fallback chain (vector -> llm -> keyword), Level A LLM retriever with catalogue prompt (`link.v1`), ID validation, and relevance cutoff (>=0.5). Emits `kb.retrieval` logs.
+- U6-T4: Link management endpoints in `app/routers/web_kb.py`, `web_meetings.py`, and `web_items.py`. Reusable `partials/suggested_links.html` with Accept/Dismiss actions. Creating action item link records append-only `kb_linked` audit event.
+- U6-T5: Full UI created: `/kb` list with search and source pills, `/kb/new` with paste & file upload, `/kb/{id}` detail with summary and referrers, Knowledge tab on meetings, and Linked Knowledge card on action item detail with AI suggest button and skeleton loader.
+- U6-T6: `app/services/brief_service.py` with `app/ai/prompts/brief.py` (`brief.v1`). Assembles structured context (summary, decisions, person's items, changes since, related KB). Generates brief via AI with fallback to deterministic template brief (`generated_by="fallback"`). Default person selection prioritizes absent > no_response > handover_to > first.
+- U6-T7: Brief tab UI in `app/templates/meetings/partials/brief_tab.html` with person selector, **Generate brief** AI button, shimmer skeleton indicator, formatted 4-section brief card, Copy button, and fallback retry banner.
+- U6-T8: 17 tests in `tests/test_unit6_kb_brief.py` covering creation, upload validation, summary fallback, LLM retrieval happy path, keyword fallback, link uniqueness, auto-indexing meetings, brief person selection, brief generation happy path & template fallback, and all web endpoints. Total test suite: 73 tests passing.
+
+**Done but NOT VERIFIED:**
+- Production live LLM API call in automated tests (intentional per AGENTS.md §6.8: tests run 100% offline with FakeProvider).
+
+**Not done / deferred:**
+- Unit 7: Special feature: Nudge Center.
+- Unit 8: Seed data, README, polish, final deploy.
+
+**Files created or modified:**
+- `app/models/kb.py`
+- `app/models/brief.py`
+- `app/models/__init__.py`
+- `app/schemas/kb.py`
+- `app/schemas/__init__.py`
+- `app/ai/schemas.py`
+- `app/ai/fake.py`
+- `app/ai/prompts/kb_summary.py`
+- `app/ai/prompts/link.py`
+- `app/ai/prompts/brief.py`
+- `app/kb/__init__.py`
+- `app/kb/retrieval.py`
+- `app/services/kb_service.py`
+- `app/services/brief_service.py`
+- `app/services/meeting_service.py`
+- `app/services/recap_service.py`
+- `app/services/__init__.py`
+- `app/routers/web_kb.py`
+- `app/routers/web_meetings.py`
+- `app/routers/web_items.py`
+- `app/templates/partials/suggested_links.html`
+- `app/templates/kb/list.html`
+- `app/templates/kb/form.html`
+- `app/templates/kb/detail.html`
+- `app/templates/meetings/partials/knowledge_tab.html`
+- `app/templates/meetings/partials/brief_tab.html`
+- `app/templates/items/detail.html`
+- `tests/test_unit6_kb_brief.py`
+- `TASKS.md`
+- `memory.md`
+
+**Commands run to verify:**
+- `.venv\Scripts\ruff check .` (All checks passed)
+- `.venv\Scripts\ruff format --check .` (72 files already formatted)
+- `.venv\Scripts\pytest -q` (73 passed in 1.74s)
+
+**Pipeline result after push:**
+- Ready to commit and push to `origin main`.
+
+**Gotchas / lessons for the next agent:**
+- `FakeProvider` recognizes `"timeout"`, `"invalid_json"`, `"empty"`. Testing fallback paths should use one of these explicitly.
+- In `CatchupBrief`, the fields are `meeting_id`, `person_id`, `content_json` (containing `tldr`, `key_decisions`, `your_items`, `changed_since`, `related_knowledge`, `suggested_first_steps`), and `generated_by` ("ai" or "fallback").
+- `close_meeting` convenience helper in `meeting_service` handles transitioning `planned` -> `held` -> `closed` automatically.
+
+**Next pass should:**
+1. Follow `AGENTS.md` ritual and read `memory.md`.
+2. Build Unit 7: Special feature: Nudge Center (`TASKS.md` U7-T1 to U7-T6).
+
 
 
 

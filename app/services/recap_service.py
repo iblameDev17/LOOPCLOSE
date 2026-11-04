@@ -292,6 +292,14 @@ def apply_recap(
 
     db.commit()
 
+    # Auto-index meeting into Knowledge Base per PRD FR-K2
+    try:
+        from app.services import kb_service
+
+        kb_service.auto_index_meeting(db, meeting_id)
+    except Exception as exc:
+        logger.warning("Failed to auto-index meeting %s into KB: %s", meeting_id, exc)
+
     log_event(
         logger,
         "meeting.recap_applied",
