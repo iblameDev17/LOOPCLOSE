@@ -121,13 +121,13 @@ Tasks:
 **Depends on:** Units 3–4 · **Read:** `PRD.md` §5.5, §6; `ARCHITECTURE.md` §10, §12; `design.md` §4.8, §4.10, §5.4.
 
 Tasks:
-- [ ] **U5-T1** `app/ai/provider.py` protocol; `gemini.py` (**verify SDK usage against current docs**); `fake.py` (deterministic canned outputs, plus switchable failure modes: timeout, invalid JSON, empty).
-- [ ] **U5-T2** `app/ai/client.py` `AIClient.run_structured`: truncate input (`AI_MAX_INPUT_CHARS`, log `ai.truncated_input`), timeout, fence stripping, JSON parse, Pydantic validation, retry policy, `AIResult`, `ai.call` log (latency, attempts, outcome, error_code, input/output chars), no content logged. Missing key → fallback path with a one-time WARNING.
-- [ ] **U5-T3** `app/ai/prompts/recap.py` (`PROMPT_VERSION="recap.v1"`; schema in system prompt; delimiters; resolve relative dates using meeting date; participants list; "null if not stated").
-- [ ] **U5-T4** `app/ai/fallbacks.py`: heuristic recap (prefix rules `Action:`/`TODO`/`- [ ]`/`AI:` → items; `Decision:` → decisions; first sentences → summary).
-- [ ] **U5-T5** `recap_service`: generate (stores `recap_json`, sets `ai_status`/`ai_error`), owner resolution (exact → fuzzy 0.8 → none), apply selected rows (creates `Decision` and `ActionItem` with `source=ai`/`heuristic`, writes `created` events with actor `ai`), stores summary, discard.
-- [ ] **U5-T6** UI: Notes & Recap tab — **Generate recap** AI button with skeleton; **review form** per `design.md` §5.4 (editable summary, checkbox rows, owner select preselected, due date, priority); **Apply selected**/**Discard**; AI pills; fallback banner + **Retry**.
-- [ ] **U5-T7** Tests: valid JSON happy path; code-fenced JSON; invalid JSON → retry → success; invalid twice → heuristic fallback; timeout → fallback; owner resolution exact/fuzzy/none; relative date prompt contains meeting date; apply creates items + events; no network used.
+- [x] **U5-T1** `app/ai/provider.py` protocol; `gemini.py` (**verify SDK usage against current docs**); `fake.py` (deterministic canned outputs, plus switchable failure modes: timeout, invalid JSON, empty).
+- [x] **U5-T2** `app/ai/client.py` `AIClient.run_structured`: truncate input (`AI_MAX_INPUT_CHARS`, log `ai.truncated_input`), timeout, fence stripping, JSON parse, Pydantic validation, retry policy, `AIResult`, `ai.call` log (latency, attempts, outcome, error_code, input/output chars), no content logged. Missing key → fallback path with a one-time WARNING.
+- [x] **U5-T3** `app/ai/prompts/recap.py` (`PROMPT_VERSION="recap.v1"`; schema in system prompt; delimiters; resolve relative dates using meeting date; participants list; "null if not stated").
+- [x] **U5-T4** `app/ai/fallbacks.py`: heuristic recap (prefix rules `Action:`/`TODO`/`- [ ]`/`AI:` → items; `Decision:` → decisions; first sentences → summary).
+- [x] **U5-T5** `recap_service`: generate (stores `recap_json`, sets `ai_status`/`ai_error`), owner resolution (exact → fuzzy 0.8 → none), apply selected rows (creates `Decision` and `ActionItem` with `source=ai`/`heuristic`, writes `created` events with actor `ai`), stores summary, discard.
+- [x] **U5-T6** UI: Notes & Recap tab — **Generate recap** AI button with skeleton; **review form** per `design.md` §5.4 (editable summary, checkbox rows, owner select preselected, due date, priority); **Apply selected**/**Discard**; AI pills; fallback banner + **Retry**.
+- [x] **U5-T7** Tests: valid JSON happy path; code-fenced JSON; invalid JSON → retry → success; invalid twice → heuristic fallback; timeout → fallback; owner resolution exact/fuzzy/none; relative date prompt contains meeting date; apply creates items + events; no network used.
 
 **Acceptance:** with a key set, pasting messy notes and clicking Generate yields a sensible reviewable proposal; applying creates items with AI badges and `created` history events; with the key removed or `LLM_PROVIDER=fake` failure mode, the UI shows the fallback banner and heuristic output; logs show `ai.call` (latency/outcome) and `ai.fallback`.
 

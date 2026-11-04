@@ -21,17 +21,17 @@
 ## 1. CURRENT STATE SNAPSHOT  *(rewrite in place every pass)*
 
 ```
-Last updated:            2026-10-30T08:45:00Z
-Last pass #:             4
-Last unit worked on:     Unit 4 (Action items, history, carry-forward)
+Last updated:            2026-11-04T17:45:00Z
+Last pass #:             5
+Last unit worked on:     Unit 5 (AI foundation + recap)
 Agent / tool:            Antigravity (Gemini 3.8 Flash)
 Repo runnable locally:   yes (uvicorn app.main:app, verified)
-Tests passing:           yes [count: 44]
+Tests passing:           yes [count: 56]
 Pipeline status (main):  diagnostic smoke test + Docker ARG commit injection configured
 Live URL:                (configured on Render)
-Units complete:          Unit 1, Unit 2, Unit 3, Unit 4
+Units complete:          Unit 1, Unit 2, Unit 3, Unit 4, Unit 5
 Units in progress:       none
-Next recommended unit:   Unit 5 (AI foundation + recap)
+Next recommended unit:   Unit 6 (KB + linking + catch-up brief)
 ```
 
 ---
@@ -89,6 +89,18 @@ Format: `path — purpose — created in Unit X — notes/gotchas`
 - `app/services/meeting_service.py` — meeting/handover creation, lifecycle state transitions, attendance, notes caps, decisions, handover reassign — Unit 3 (updated Unit 4)
 - `app/services/action_item_service.py` — full action item lifecycle, status transitions, close with outcome, reopen, reassign, audit events — Unit 4
 - `app/services/carry_forward_service.py` — carry forward open items across meetings, carried count increment, audit events — Unit 4
+- `app/services/recap_service.py` — generate recap proposal, exact/fuzzy owner resolution, apply/discard proposals — Unit 5
+
+**AI Subsystem:**
+- `app/ai/__init__.py` — AI subsystem package marker — Unit 1
+- `app/ai/provider.py` — LLMProvider runtime-checkable protocol with generate_json and embed — Unit 5
+- `app/ai/gemini.py` — GeminiProvider wrapping google-genai 2.34+ SDK with types.GenerateContentConfig — Unit 5
+- `app/ai/fake.py` — FakeProvider for deterministic testing with timeout/invalid_json/empty failure toggles — Unit 5
+- `app/ai/client.py` — AIClient.run_structured() with retry, timeout, code-fence strip, Pydantic validation, structured ai.call logging — Unit 5
+- `app/ai/schemas.py` — Pydantic output schemas (RecapResult, RecapActionItem, RecapDecision) — Unit 5
+- `app/ai/fallbacks.py` — heuristic_recap() rule-based extraction from raw notes — Unit 5
+- `app/ai/prompts/__init__.py` — prompts package marker — Unit 1
+- `app/ai/prompts/recap.py` — recap prompt template v1 with delimited injection protection and meeting date resolution — Unit 5
 
 **Routers:**
 - `app/routers/__init__.py` — package marker — Unit 1
@@ -113,7 +125,7 @@ Format: `path — purpose — created in Unit X — notes/gotchas`
 - `app/templates/meetings/form.html` — Meeting/Handover create form with dynamic kind toggle, participant checkboxes, handover pickers — Unit 3
 - `app/templates/meetings/detail.html` — Full meeting detail view with action buttons, status badges, tabs, and modals — Unit 3
 - `app/templates/meetings/partials/overview_tab.html` — Meeting overview tab, handover banner, carried-over items card, close carry-forward prompt, agenda, participants, decisions — Unit 3 (updated Unit 4)
-- `app/templates/meetings/partials/notes_tab.html` — Notes editor with 50,000 char counter, live countdown, and save form — Unit 3
+- `app/templates/meetings/partials/notes_tab.html` — Notes editor with 50,000 char counter, live countdown, save form, Generate recap AI button with skeleton loading indicator, and proposal review card with apply/discard — Unit 3 (updated Unit 5)
 - `app/templates/meetings/partials/decisions_list.html` — Decisions list with delete action and inline add form — Unit 3
 - `app/templates/meetings/partials/participants_card.html` — Participants roster with inline HTMX attendance dropdowns and add form — Unit 3
 - `app/templates/meetings/partials/items_tab.html` — Meeting action items list with inline add form — Unit 3 (completed Unit 4)
@@ -129,6 +141,7 @@ Format: `path — purpose — created in Unit X — notes/gotchas`
 - `tests/test_unit1_foundation.py` — 17 unit/integration tests verifying health, headers, logging, redaction, URLs, errors — Unit 1
 - `tests/test_unit3_core_domain.py` — 15 tests for lifecycle, handover rules, participant uniqueness, attendance, notes cap, and UI endpoints — Unit 3
 - `tests/test_unit4_action_items.py` — 12 unit/integration tests for action items lifecycle, outcomes, blocked reasons, carry forward semantics, and routes — Unit 4
+- `tests/test_unit5_ai_recap.py` — 12 unit/integration tests for AIClient, fence stripping, timeout/invalid_json retries, heuristic extraction, owner resolution, apply proposals, and web routes — Unit 5
 - `logs/.gitkeep` — keeps logs directory tracked in git — Unit 1
 
 ---
@@ -195,6 +208,7 @@ uvicorn app.main:app --reload
 | 12 | 2026-10-30 | Unit 2 | `ARG RENDER_GIT_COMMIT` and `ARG GIT_SHA` in Dockerfile exported to `ENV` | Render passes RENDER_GIT_COMMIT as build ARG for Docker; exporting to ENV makes it accessible at runtime to /health | `Dockerfile`, `.github/workflows/ci-cd.yml` |
 | 13 | 2026-10-30 | Unit 2 | Diagnostic smoke test in CI workflow with response preview & degraded warning | Shows exact HTTP status and body on every attempt, warning clearly if commit is null | `.github/workflows/ci-cd.yml` |
 | 14 | 2026-10-30 | Unit 4 | Close with outcome enforcement | Status cannot be directly set to done/dropped via change_status; must call close_action_item with OutcomeType and outcome_note (>=5 chars) | `app/services/action_item_service.py` |
+| 15 | 2026-11-04 | Unit 5 | Robust AIClient with retry & heuristic fallback | AIClient.run_structured() strips markdown fences, retries invalid JSON once with schema reminder, and falls back to deterministic heuristic extraction on failure. Never raises for AI issues. | `app/ai/client.py`, `app/ai/fallbacks.py`, `app/services/recap_service.py` |
 
 ---
 
@@ -206,18 +220,20 @@ uvicorn app.main:app --reload
 
 ## 7. NEXT PASS CONSIDERATIONS  *(rewrite in place every pass — the most important section for the next agent)*
 
-- **Next unit:** Unit 5 — AI foundation + recap (`TASKS.md` U5-T1 to U5-T7).
-- **Files to create/modify in Unit 5:**
-  - `app/ai/provider.py` (LLMProvider protocol)
-  - `app/ai/gemini.py` (GeminiProvider using google-genai SDK)
-  - `app/ai/fake.py` (FakeProvider with failure simulation toggles: timeout, invalid JSON, empty)
-  - `app/ai/client.py` (AIClient with retry, timeout, schema validation, ai.call logging)
-  - `app/ai/prompts/recap.py` (recap prompt version 1 with meeting date relative date resolution)
-  - `app/ai/fallbacks.py` (heuristic recap extraction rules)
-  - `app/services/recap_service.py` (recap generation, owner resolution, apply proposals)
-  - `app/templates/meetings/partials/notes_tab.html` (Generate recap AI button with skeleton loader, review proposal card)
-  - `tests/test_unit5_ai_recap.py`
-- **Checklist before running Unit 5:** Ensure `ruff format --check .`, `ruff check .`, and `pytest` are all passing.
+- **Next unit:** Unit 6 — Knowledge base + linking (Level A RAG) + catch-up brief (`TASKS.md` U6-T1 to U6-T8).
+- **Files to create/modify in Unit 6:**
+  - `app/models/kb.py` (`KBDocument`, `KBLink`, `CatchupBrief`, and `KBChunk` table stub)
+  - `app/schemas/kb.py` (`KBDocumentCreate`, `CatchupBriefRead`, etc.)
+  - `app/services/kb_service.py` (document upload/paste validation <=1MB, auto-index meetings, summarize)
+  - `app/kb/retrieval.py` (`find_related`, `LLMSummaryRetriever`, `KeywordRetriever` fallback chain)
+  - `app/ai/prompts/brief.py` (`brief.v1` catch-up brief prompt)
+  - `app/ai/prompts/link.py` (`link.v1` entity-document linking prompt)
+  - `app/ai/prompts/kb_summary.py` (`kb_summary.v1` document summarization prompt)
+  - `app/services/brief_service.py` (brief generation with fallback template)
+  - `app/routers/web_kb.py` and `app/routers/web_meetings.py` (KB routes, Brief tab, suggest-links endpoints)
+  - `app/templates/kb/` (`list.html`, `detail.html`, `form.html`) and meeting partials (`brief_tab.html`, `knowledge_tab.html`)
+  - `tests/test_unit6_kb_brief.py`
+- **Checklist before running Unit 6:** Ensure `ruff format --check .`, `ruff check .`, and `pytest` are all passing.
 
 ---
 
@@ -457,5 +473,64 @@ uvicorn app.main:app --reload
 **Next pass should:**
 1. Follow `AGENTS.md` ritual and read `memory.md`.
 2. Build Unit 5: AI foundation + recap (`TASKS.md` U5-T1 to U5-T7).
+
+---
+
+### Pass 5 — Unit 5: AI foundation + recap
+- **Date/time (UTC):** 2026-11-04T17:45:00Z
+- **Agent/tool:** Antigravity — Gemini 3.8 Flash
+- **Goal of this pass:** Build reliable AI subsystem (LLMProvider protocol, GeminiProvider, FakeProvider with failure simulations, AIClient with retries and logging), heuristic fallbacks, prompt templates with injection delimiters, recap service with exact/fuzzy owner resolution, review/apply web UI with skeleton loading state, and complete test suite.
+- **Status:** complete
+
+**Done (verified):**
+- U5-T1: `app/ai/provider.py` defined runtime-checkable `LLMProvider` protocol with `generate_json` and `embed`. `app/ai/gemini.py` implements it using `google-genai` 2.34+ SDK with `GenerateContentConfig(response_mime_type="application/json")`. `app/ai/fake.py` implements deterministic canned outputs with switchable failure modes (`timeout`, `invalid_json`, `empty`).
+- U5-T2: `app/ai/client.py` implemented `AIClient.run_structured()`: input truncation at `ai_max_input_chars` with `ai.truncated_input` log, timeout, code-fence stripping, JSON parsing, Pydantic model validation (`RecapResult`), automatic retry with strict JSON-only reminder on failure, and structured `ai.call` logging with latency, attempts, outcome, character counts (no raw content or secrets). Missing provider emits one-time warning and falls back.
+- U5-T3: `app/ai/prompts/recap.py` implemented with `PROMPT_VERSION = "recap.v1"`, `<notes>` delimiters for prompt-injection hygiene, relative date resolution against meeting date, and explicit schema constraints.
+- U5-T4: `app/ai/fallbacks.py` implemented `heuristic_recap()`: rule-based extraction matching `Action:`, `TODO`, `- [ ]`, `AI:` for items, `Decision:` for decisions, `?` for open questions, and first 2 sentences for summary.
+- U5-T5: `app/services/recap_service.py` implemented `generate_recap` (stores `recap_json`, sets `ai_status`), owner resolution (`exact` -> `fuzzy >= 0.8` -> `none`), `apply_recap` (creates `Decision` and `ActionItem` rows with `source=ai` or `source=heuristic`, created events with `actor="ai"`), and `discard_recap`.
+- U5-T6: `app/templates/meetings/partials/notes_tab.html` wired with **Generate recap** AI button, skeleton shimmering loader indicator (`#ai-indicator`), review proposal card with AI badge / fallback banner, editable summary, checkbox lists for decisions and action items with resolved owners, and Apply / Discard actions.
+- U5-T7: 12 tests in `tests/test_unit5_ai_recap.py` covering valid JSON, code-fenced JSON, timeout fallback, invalid JSON retry, heuristic fallback parsing, prompt parameters, exact/fuzzy/none owner resolution, recap apply and discard, and HTMX web endpoints. Total test suite: 56 tests passing.
+
+**Done but NOT VERIFIED:**
+- Production Gemini API call against live network in automated tests (intentional per AGENTS.md §6.8: tests run 100% offline with FakeProvider; GeminiProvider is verified against installed google-genai 2.34 SDK).
+
+**Not done / deferred:**
+- Knowledge base and catch-up briefs (Unit 6).
+- Nudge Center (Unit 7).
+
+**Files created or modified:**
+- `app/ai/__init__.py`
+- `app/ai/provider.py`
+- `app/ai/gemini.py`
+- `app/ai/fake.py`
+- `app/ai/client.py`
+- `app/ai/schemas.py`
+- `app/ai/fallbacks.py`
+- `app/ai/prompts/__init__.py`
+- `app/ai/prompts/recap.py`
+- `app/services/recap_service.py`
+- `app/services/__init__.py`
+- `app/routers/web_meetings.py`
+- `app/templates/meetings/partials/notes_tab.html`
+- `tests/test_unit5_ai_recap.py`
+- `TASKS.md`
+- `memory.md`
+
+**Commands run to verify:**
+- `.venv\Scripts\ruff check .` (All checks passed)
+- `.venv\Scripts\ruff format --check .` (70 files already formatted)
+- `.venv\Scripts\pytest -q` (56 passed in 1.13s)
+
+**Pipeline result after push:**
+- Ready to push to GitHub `main`.
+
+**Gotchas / lessons for the next agent:**
+- `google-genai` SDK v2.34+ uses `client.models.generate_content(model=..., contents=..., config=types.GenerateContentConfig(...))`.
+- When running `pytest` in sandboxed terminal on Windows, anyio's loopback socket / blocking portal in Starlette `TestClient` requires loopback execution.
+
+**Next pass should:**
+1. Follow `AGENTS.md` ritual and read `memory.md`.
+2. Build Unit 6: Knowledge base + linking (Level A RAG) + catch-up brief (`TASKS.md` U6-T1 to U6-T8).
+
 
 

@@ -1,44 +1,226 @@
-<div id="notes-tab-content" class="card">
-  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-    <div>
-      <h2 class="card-title">Meeting Notes & Raw Transcript</h2>
-      <p class="text-muted small" style="margin: 4px 0 0 0;">Paste rough discussion notes, chat messages, or call transcripts below.</p>
+<div id="notes-tab-content">
+  <!-- Main Notes Card -->
+  <div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <h2 class="card-title">Meeting Notes & Raw Transcript</h2>
+        <p class="text-muted small" style="margin: 4px 0 0 0;">Paste rough discussion notes, chat messages, or call transcripts below.</p>
+      </div>
+      {% if not meeting.is_closed %}
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button type="button" class="btn btn-secondary btn-sm"
+                onclick="document.getElementById('notes-form').requestSubmit()">
+          Save Notes
+        </button>
+        {% if meeting.raw_notes and meeting.raw_notes|length >= 20 %}
+        <button type="button" class="btn btn-ai btn-sm"
+                hx-post="/meetings/{{ meeting.id }}/recap"
+                hx-target="#notes-tab-content"
+                hx-swap="outerHTML"
+                hx-indicator="#ai-indicator">
+          <svg width="14" height="14" aria-hidden="true"><use href="#icon-sparkle"/></svg>
+          <span>Generate Recap</span>
+        </button>
+        {% else %}
+        <button type="button" class="btn btn-ai btn-sm" disabled
+                title="Add at least 20 characters of notes to generate a recap">
+          <svg width="14" height="14" aria-hidden="true"><use href="#icon-sparkle"/></svg>
+          <span>Generate Recap</span>
+        </button>
+        {% endif %}
+      </div>
+      {% endif %}
     </div>
-    {% if not meeting.is_closed %}
-    <div style="display: flex; gap: 10px;">
-      <button type="button" class="btn btn-secondary btn-sm"
-              onclick="document.getElementById('notes-form').requestSubmit()">
-        Save Notes
-      </button>
-      <button type="button" class="btn btn-ai btn-sm" disabled title="AI Recap is enabled in Unit 5">
-        <svg width="14" height="14" aria-hidden="true"><use href="#icon-sparkle"/></svg>
-        <span>Generate Recap</span>
-      </button>
+
+    <!-- AI Thinking / Skeleton Indicator -->
+    <div id="ai-indicator" class="htmx-indicator" style="padding: 16px 20px;">
+      <div class="skeleton-block" style="padding: 24px; border-radius: var(--radius-sm);">
+        <div class="skeleton-bar skeleton-bar-full"></div>
+        <div class="skeleton-bar skeleton-bar-med"></div>
+        <div class="skeleton-bar skeleton-bar-short"></div>
+        <div class="skeleton-caption">AI is reading your notes… this can take a few seconds.</div>
+      </div>
     </div>
-    {% endif %}
+
+    <div style="padding: 20px;">
+      {% if apply_result %}
+      <div class="banner banner-info" style="margin-bottom: 20px;">
+        <div class="banner-body">
+          <strong>Recap applied!</strong> Created {{ apply_result.created_decisions }} decision(s) and {{ apply_result.created_items }} action item(s) from {{ apply_result.source }} recap.
+        </div>
+      </div>
+      {% endif %}
+
+      {% if meeting.is_closed %}
+        <div style="background: var(--surface-2); padding: 16px; border-radius: 6px; white-space: pre-wrap; line-height: 1.6; min-height: 200px;">
+          {{ meeting.raw_notes or "No notes were recorded for this meeting." }}
+        </div>
+      {% else %}
+        <form id="notes-form" hx-post="/meetings/{{ meeting.id }}/notes"
+              hx-target="#notes-tab-content"
+              hx-swap="outerHTML">
+          <div class="form-group">
+            <textarea name="raw_notes" class="textarea" rows="14" maxlength="50000"
+                      placeholder="Type or paste meeting notes, decisions discussed, action items, or chat logs here…"
+                      style="width: 100%; font-family: inherit; line-height: 1.6;">{{ meeting.raw_notes or '' }}</textarea>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+            <span class="text-muted small">
+              {{ meeting.raw_notes|length if meeting.raw_notes else 0 }} / 50,000 characters
+            </span>
+            <button type="submit" class="btn btn-primary btn-sm">Save Notes</button>
+          </div>
+        </form>
+      {% endif %}
+    </div>
   </div>
 
-  <div style="padding: 20px;">
-    {% if meeting.is_closed %}
-      <div style="background: var(--surface-2); padding: 16px; border-radius: 6px; white-space: pre-wrap; line-height: 1.6; min-height: 200px;">
-        {{ meeting.raw_notes or "No notes were recorded for this meeting." }}
+  <!-- Recap Review Proposal Section -->
+  {% set current_recap = recap or meeting.recap_json %}
+  {% if current_recap and not meeting.is_closed %}
+  <div class="card" style="margin-top: 24px; border: 1px solid var(--ai-border);">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; background: var(--ai-soft);">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <h3 class="card-title" style="color: var(--ai); margin: 0;">Review Recap Proposal</h3>
+        {% if meeting.ai_status == 'ok' %}
+        <span class="badge badge-ai">
+          <svg width="12" height="12" aria-hidden="true"><use href="#icon-sparkle"/></svg>
+          ✦ AI
+        </span>
+        {% elif meeting.ai_status == 'fallback' %}
+        <span class="badge" style="background: var(--warning-soft); color: var(--warning);">
+          Basic Extraction (Fallback)
+        </span>
+        {% endif %}
       </div>
-    {% else %}
-      <form id="notes-form" hx-post="/meetings/{{ meeting.id }}/notes"
+      <button type="button" class="btn btn-ghost btn-sm"
+              hx-post="/meetings/{{ meeting.id }}/recap/discard"
+              hx-target="#notes-tab-content"
+              hx-swap="outerHTML">
+        Discard
+      </button>
+    </div>
+
+    <div style="padding: 20px;">
+      {% if meeting.ai_status == 'fallback' %}
+      <div class="banner banner-ai-fallback">
+        <div class="banner-body">
+          <strong>AI is unavailable right now:</strong> showing a basic heuristic extraction. You can retry with AI below.
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm"
+                hx-post="/meetings/{{ meeting.id }}/recap"
+                hx-target="#notes-tab-content"
+                hx-swap="outerHTML"
+                hx-indicator="#ai-indicator">
+          Retry
+        </button>
+      </div>
+      {% elif meeting.ai_status == 'failed' %}
+      <div class="banner banner-ai-error">
+        <div class="banner-body">
+          <strong>AI extraction failed:</strong> {{ meeting.ai_error or "Could not parse recap." }}
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm"
+                hx-post="/meetings/{{ meeting.id }}/recap"
+                hx-target="#notes-tab-content"
+                hx-swap="outerHTML"
+                hx-indicator="#ai-indicator">
+          Retry
+        </button>
+      </div>
+      {% endif %}
+
+      <form hx-post="/meetings/{{ meeting.id }}/recap/apply"
             hx-target="#notes-tab-content"
             hx-swap="outerHTML">
-        <div class="form-group">
-          <textarea name="raw_notes" class="textarea" rows="14" maxlength="50000"
-                    placeholder="Type or paste meeting notes, decisions discussed, action items, or chat logs here…"
-                    style="width: 100%; font-family: inherit; line-height: 1.6;">{{ meeting.raw_notes or '' }}</textarea>
+
+        <!-- Summary -->
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label class="label" for="recap-summary">Executive Summary</label>
+          <textarea id="recap-summary" name="summary" class="textarea" rows="3"
+                    style="width: 100%; font-family: inherit;">{{ current_recap.summary or '' }}</textarea>
         </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
-          <span class="text-muted small">
-            {{ meeting.raw_notes|length if meeting.raw_notes else 0 }} / 50,000 characters
-          </span>
-          <button type="submit" class="btn btn-primary btn-sm">Save Notes</button>
+
+        <!-- Decisions -->
+        {% if current_recap.decisions %}
+        <div style="margin-bottom: 24px;">
+          <h4 style="font-size: 15px; font-weight: 600; margin-bottom: 12px;">Key Decisions ({{ current_recap.decisions|length }})</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            {% for dec in current_recap.decisions %}
+            <label style="display: flex; align-items: flex-start; gap: 10px; background: var(--surface-2); padding: 10px 14px; border-radius: 6px; cursor: pointer;">
+              <input type="checkbox" name="selected_decisions" value="{{ loop.index0 }}" checked style="margin-top: 3px;">
+              <span style="flex: 1; font-size: 14px;">{{ dec.text }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Action Items -->
+        {% if current_recap.action_items %}
+        <div style="margin-bottom: 24px;">
+          <h4 style="font-size: 15px; font-weight: 600; margin-bottom: 12px;">Proposed Action Items ({{ current_recap.action_items|length }})</h4>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            {% for item in current_recap.action_items %}
+            <div style="display: flex; align-items: flex-start; gap: 12px; background: var(--surface-2); padding: 12px 14px; border-radius: 6px; border-left: 3px solid {% if item.priority == 'high' %}var(--prio-high){% elif item.priority == 'low' %}var(--prio-low){% else %}var(--prio-medium){% endif %};">
+              <input type="checkbox" name="selected_items" value="{{ loop.index0 }}" checked style="margin-top: 4px;">
+              <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                  <span style="font-weight: 600; font-size: 14px;">{{ item.title }}</span>
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    {% if item.owner_match == 'exact' %}
+                    <span class="badge" style="background: var(--primary-soft); color: var(--primary);">Owner: {{ item.resolved_owner }}</span>
+                    {% elif item.owner_match == 'fuzzy' %}
+                    <span class="badge" style="background: var(--info-soft); color: var(--info);" title="Matched from '{{ item.owner_name }}'">Owner: {{ item.resolved_owner }} (approx)</span>
+                    {% elif item.owner_name %}
+                    <span class="badge" style="background: var(--warning-soft); color: var(--warning);">Needs owner (notes said: {{ item.owner_name }})</span>
+                    {% else %}
+                    <span class="badge" style="background: var(--warning-soft); color: var(--warning);">Needs owner</span>
+                    {% endif %}
+
+                    {% if item.due_date %}
+                    <span class="badge" style="background: var(--surface); border: 1px solid var(--border);">Due: {{ item.due_date }}</span>
+                    {% endif %}
+
+                    <span class="badge" style="background: var(--surface); border: 1px solid var(--border); text-transform: capitalize;">{{ item.priority }}</span>
+                  </div>
+                </div>
+                {% if item.rationale %}
+                <p class="text-muted small" style="margin: 6px 0 0 0; font-style: italic;">"{{ item.rationale }}"</p>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Open Questions -->
+        {% if current_recap.open_questions %}
+        <div style="margin-bottom: 24px;">
+          <h4 style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">Open Questions</h4>
+          <ul style="padding-left: 20px; margin: 0; color: var(--text-muted); font-size: 14px;">
+            {% for q in current_recap.open_questions %}
+            <li style="margin-bottom: 4px;">{{ q }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <!-- Submit actions -->
+        <div style="display: flex; gap: 12px; align-items: center; padding-top: 12px; border-top: 1px solid var(--border);">
+          <button type="submit" class="btn btn-primary">
+            Apply Selected
+          </button>
+          <button type="button" class="btn btn-secondary"
+                  hx-post="/meetings/{{ meeting.id }}/recap/discard"
+                  hx-target="#notes-tab-content"
+                  hx-swap="outerHTML">
+            Discard Proposal
+          </button>
         </div>
       </form>
-    {% endif %}
+    </div>
   </div>
+  {% endif %}
 </div>

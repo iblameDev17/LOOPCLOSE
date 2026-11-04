@@ -16,7 +16,7 @@ from app.enums import Attendance, MeetingKind
 from app.errors import ValidationFailed
 from app.models.decision import Decision
 from app.schemas.meeting import MeetingCreate
-from app.services import carry_forward_service, meeting_service, people_service
+from app.services import carry_forward_service, meeting_service, people_service, recap_service
 
 router = APIRouter(tags=["meetings"])
 templates = Jinja2Templates(directory="app/templates")
@@ -347,3 +347,81 @@ def handover_reassign(
     """Bulk reassign handover items (stub)."""
     meeting_service.reassign_handover_items_stub(db, id)
     return RedirectResponse(url=f"/meetings/{id}?tab=overview", status_code=303)
+
+
+@router.post("/meetings/{id}/recap", response_class=HTMLResponse)
+def generate_recap(
+    request: Request,
+    id: int,
+    db: Session = Depends(get_db),
+) -> Response:
+    """Generate an AI recap proposal from meeting notes."""
+    recap = recap_service.generate_recap(db, id)
+    meeting = meeting_service.get_meeting(db, id)
+    ctx = _get_base_context(request, db)
+    ctx.update(
+        {
+            "meeting": meeting,
+            "recap": recap,
+            "all_people": people_service.list_people(db, active_only=True),
+        }
+    )
+    return templates.TemplateResponse(
+        request=request, name="meetings/partials/notes_tab.html", context=ctx
+    )
+
+
+@router.post("/meetings/{id}/recap/apply", response_class=HTMLResponse)
+def apply_recap(
+    request: Request,
+    id: int,
+    summary: Annotated[str, Form()] = "",
+    selected_decisions: Annotated[list[str] | None, Form()] = None,
+    selected_items: Annotated[list[str] | None, Form()] = None,
+    db: Session = Depends(get_db),
+) -> Response:
+    """Apply selected rows from the recap proposal."""
+    dec_indices = [int(x) for x in selected_decisions] if selected_decisions else None
+    item_indices = [int(x) for x in selected_items] if selected_items else None
+
+    result = recap_service.apply_recap(
+        db,
+        id,
+        selected_decisions=dec_indices,
+        selected_items=item_indices,
+        edited_summary=summary.strip() or None,
+    )
+
+    meeting = meeting_service.get_meeting(db, id)
+    ctx = _get_base_context(request, db)
+    ctx.update(
+        {
+            "meeting": meeting,
+            "apply_result": result,
+            "all_people": people_service.list_people(db, active_only=True),
+        }
+    )
+
+    if request.headers.get("HX-Request") == "true":
+        return templates.TemplateResponse(
+            request=request, name="meetings/partials/notes_tab.html", context=ctx
+        )
+    return RedirectResponse(url=f"/meetings/{id}?tab=notes", status_code=303)
+
+
+@router.post("/meetings/{id}/recap/discard", response_class=HTMLResponse)
+def discard_recap(
+    request: Request,
+    id: int,
+    db: Session = Depends(get_db),
+) -> Response:
+    """Discard the current recap proposal."""
+    recap_service.discard_recap(db, id)
+    meeting = meeting_service.get_meeting(db, id)
+    ctx = _get_base_context(request, db)
+    ctx["meeting"] = meeting
+    if request.headers.get("HX-Request") == "true":
+        return templates.TemplateResponse(
+            request=request, name="meetings/partials/notes_tab.html", context=ctx
+        )
+    return RedirectResponse(url=f"/meetings/{id}?tab=notes", status_code=303)
