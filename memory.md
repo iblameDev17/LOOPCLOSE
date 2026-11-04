@@ -52,7 +52,7 @@ Format: `path — purpose — created in Unit X — notes/gotchas`
 - `Dockerfile` — container definition for Python 3.12-slim as non-root user with healthcheck, accepting RENDER_GIT_COMMIT and GIT_SHA build args — Unit 2 (updated Pass 4)
 - `.gitleaks.toml` — Gitleaks secret detection configuration with allowlist for test mocks and examples — Unit 2
 - `render.yaml` — Render Blueprint specification for loopclose web service + loopclose-db — Unit 2
-- `.github/workflows/ci-cd.yml` — GitHub Actions workflow (gitleaks, codeql, test, docker w/ build-args, deploy + diagnostic smoke test) — Unit 2 (updated Pass 4)
+- `.github/workflows/ci-cd.yml` — GitHub Actions workflow (gitleaks, codeql, test, docker w/ build-args, trivy container scan, deploy + diagnostic smoke test) — Unit 2 (updated Pass 5)
 - `.pre-commit-config.yaml` — optional local pre-commit guard for ruff and gitleaks — Unit 2
 - `.dockerignore` — Docker build context exclusion rules — Unit 1 — excludes .git, .venv, logs, local.db
 
@@ -209,6 +209,7 @@ uvicorn app.main:app --reload
 | 13 | 2026-10-30 | Unit 2 | Diagnostic smoke test in CI workflow with response preview & degraded warning | Shows exact HTTP status and body on every attempt, warning clearly if commit is null | `.github/workflows/ci-cd.yml` |
 | 14 | 2026-10-30 | Unit 4 | Close with outcome enforcement | Status cannot be directly set to done/dropped via change_status; must call close_action_item with OutcomeType and outcome_note (>=5 chars) | `app/services/action_item_service.py` |
 | 15 | 2026-11-04 | Unit 5 | Robust AIClient with retry & heuristic fallback | AIClient.run_structured() strips markdown fences, retries invalid JSON once with schema reminder, and falls back to deterministic heuristic extraction on failure. Never raises for AI issues. | `app/ai/client.py`, `app/ai/fallbacks.py`, `app/services/recap_service.py` |
+| 16 | 2026-11-04 | DevOps | Added Trivy container vulnerability scanning | Runs aquasecurity/trivy-action@0.28.0 on the built image with `load: true` to detect OS and library vulnerabilities (CRITICAL,HIGH) | `.github/workflows/ci-cd.yml` |
 
 ---
 
