@@ -100,8 +100,8 @@ def create_app() -> FastAPI:
     app.add_exception_handler(StarletteHTTPException, handle_http_exception)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, handle_generic_error)  # type: ignore[arg-type]
 
-    return app
-
+    
+app _me gadbad=
 
 def _seed() -> None:
     """Seed the database with demo data if empty.  Implemented in Unit 8."""
@@ -109,3 +109,4 @@ def _seed() -> None:
 
 
 app = create_app()
+
